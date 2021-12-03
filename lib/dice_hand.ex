@@ -6,7 +6,7 @@ defmodule Perudo.DiceHand do
   @type t :: %DiceHand{dice: [die], holding_dice: integer()}
   @type die :: 1..6
 
-  def new(dice_count) when dice_count == 0 do
+  def new(0) do
     %DiceHand{dice: []}
   end
 
@@ -22,9 +22,9 @@ defmodule Perudo.DiceHand do
 
   @spec add(t(), die()) ::
           t()
-  def add(hand, die) do
+  def add(%DiceHand{holding_dice: holding_dice} = hand, die) do
     case length(hand.dice) < hand.holding_dice do
-      true -> %DiceHand{hand | dice: [die | hand.dice]}
+      true -> %DiceHand{hand | dice: [die | hand.dice], holding_dice: holding_dice + 1}
       _ -> hand
     end
   end

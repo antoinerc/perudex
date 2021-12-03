@@ -27,7 +27,7 @@ defmodule Perudo.Round do
   @type move :: {:outbid, bid()} | :calza | :dudo
   @type instruction ::
           {:notify_player, visibility, player_id, player_instruction}
-  @type bid :: %{count: integer(), die: DiceHand.die()}
+  @type bid :: {:count, :die}
 
   @type player_instruction ::
           :move
@@ -36,23 +36,21 @@ defmodule Perudo.Round do
           | :reveal_hands
           | {:new_bid, bid()}
           | :unauthorized_move
+          | :illegal_bid
           | {:new_hand, DiceHand.t()}
 
   @type visibility :: :private | :public
 
   def start(player_ids, max_dice) do
-    current_player_id = Enum.random(player_ids)
-
     %Round{
-      current_player_id: current_player_id,
+      current_player_id: hd(player_ids),
       all_players: player_ids,
       remaining_players: player_ids,
-      current_bid: {0, 0},
       hands: [],
       max_dice: max_dice,
       instructions: []
     }
-    |> start_new_round(current_player_id)
+    |> start_new_round(hd(player_ids))
     |> instructions_and_state()
   end
 
@@ -62,7 +60,7 @@ defmodule Perudo.Round do
       | current_player_id: next_player,
         hands:
           Enum.map(round.remaining_players, fn p -> %{player_id: p, hand: DiceHand.new(5)} end),
-        current_bid: nil
+        current_bid: {0, 0}
     }
 
     Enum.reduce(
@@ -94,9 +92,12 @@ defmodule Perudo.Round do
         |> notify_player(:public, round.current_player_id, {:new_bid, bid})
         |> find_next_player()
         |> notify_player(:public, round.current_player_id, :move)
+        |> instructions_and_state()
 
       {:error, round} ->
-        notify_player(round, :public, round.current_player_id, :unauthorized_move)
+        round
+        |> notify_player(:public, round.current_player_id, :illegal_bid)
+        |> instructions_and_state()
     end
   end
 
@@ -106,20 +107,51 @@ defmodule Perudo.Round do
   defp handle_move(round, :dudo) do
   end
 
-  defp outbid(%Round{current_bid: current_bid} = round, bid) do
-    # case 1 -> ncount > or ndie > or (die == 1 and ncount >= count/2)
-    case bid.count <= current_bid.count && bid.die <= current_bid.die and bid.die != 1 do
+  defp outbid(%Round{current_bid: {0, 0}} = round, {_new_count, 1}), do: {:error, round}
+
+  defp outbid(%Round{current_bid: {current_count, _current_die}} = round, {new_count, 1}) do
+    case new_count < ceil(current_count / 2) do
       true ->
         {:error, round}
 
       _ ->
-        {:ok, %Round{round | instructions: [], current_bid: bid}}
+        {:ok, %Round{round | instructions: [], current_bid: {new_count, 1}}}
+    end
+  end
+
+  defp outbid(%Round{current_bid: {current_count, 1}} = round, {new_count, 1}) do
+    case new_count <= current_count do
+      true ->
+        {:error, round}
+
+      _ ->
+        {:ok, %Round{round | instructions: [], current_bid: {new_count, 1}}}
+    end
+  end
+
+  defp outbid(%Round{current_bid: {current_count, 1}} = round, {new_count, new_die}) do
+    case new_count < current_count * 2 + 1 do
+      true ->
+        {:error, round}
+
+      _ ->
+        {:ok, %Round{round | instructions: [], current_bid: {new_count, new_die}}}
+    end
+  end
+
+  defp outbid(%Round{current_bid: {current_count, current_die}} = round, {new_count, new_die}) do
+    case new_count <= current_count && new_die <= current_die do
+      true ->
+        {:error, round}
+
+      _ ->
+        {:ok, %Round{round | instructions: [], current_bid: {new_count, new_die}}}
     end
   end
 
   defp find_next_player(round) do
     current_player_index =
-      Enum.find_index(round.remaining_players, fn x -> x.id == round.current_player_id end)
+      Enum.find_index(round.remaining_players, fn id -> id == round.current_player_id end)
 
     next_player = Enum.at(round.remaining_players, current_player_index + 1)
 

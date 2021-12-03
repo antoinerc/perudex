@@ -1,6 +1,6 @@
 defmodule DiceHandTest do
   use ExUnit.Case
-  doctest Perudo
+  doctest Perudo.DiceHand
 
   test "return a dice hand" do
     dice_hand = Perudo.DiceHand.new(50)

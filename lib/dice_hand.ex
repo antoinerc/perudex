@@ -1,9 +1,9 @@
 defmodule Perudo.DiceHand do
   alias __MODULE__
 
-  defstruct [:dice, :max_dice]
+  defstruct [:dice, :holding_dice]
 
-  @type t :: %DiceHand{dice: [die], max_dice: integer()}
+  @type t :: %DiceHand{dice: [die], holding_dice: integer()}
   @type die :: 1..6
 
   def new(dice_count) when dice_count == 0 do
@@ -16,14 +16,14 @@ defmodule Perudo.DiceHand do
         for _ <- 1..dice_count do
           :rand.uniform(6)
         end,
-      max_dice: dice_count
+      holding_dice: dice_count
     }
   end
 
   @spec add(t(), die()) ::
           t()
   def add(hand, die) do
-    case length(hand.dice) < hand.max_dice do
+    case length(hand.dice) < hand.holding_dice do
       true -> %DiceHand{hand | dice: [die | hand.dice]}
       _ -> hand
     end
@@ -33,7 +33,7 @@ defmodule Perudo.DiceHand do
     hand
   end
 
-  def take(%DiceHand{dice: [_ | remaining_dice]} = hand) do
-    %DiceHand{hand | dice: remaining_dice}
+  def take(%DiceHand{dice: [_ | remaining_dice], holding_dice: holding_dice} = hand) do
+    %DiceHand{hand | dice: remaining_dice, holding_dice: holding_dice - 1}
   end
 end

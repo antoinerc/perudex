@@ -9,6 +9,7 @@ defmodule Perudo.Round do
     :remaining_players,
     :current_bid,
     :hands,
+    :max_dice,
     :instructions
   ]
 
@@ -18,6 +19,7 @@ defmodule Perudo.Round do
           current_bid: bid(),
           remaining_players: [player_id],
           hands: [%{player_id: player_id, hand: DiceHand.t()}],
+          max_dice: integer(),
           instructions: [instruction]
         }
 
@@ -38,17 +40,20 @@ defmodule Perudo.Round do
 
   @type visibility :: :private | :public
 
-  def start(player_ids) do
-    r = %Round{
-      current_player_id: Enum.random(player_ids),
+  def start(player_ids, max_dice) do
+    current_player_id = Enum.random(player_ids)
+
+    %Round{
+      current_player_id: current_player_id,
       all_players: player_ids,
       remaining_players: player_ids,
       current_bid: {0, 0},
       hands: [],
+      max_dice: max_dice,
       instructions: []
     }
-
-    start_new_round(r, r.current_player_id)
+    |> start_new_round(current_player_id)
+    |> instructions_and_state()
   end
 
   defp start_new_round(round, next_player) do
@@ -67,7 +72,7 @@ defmodule Perudo.Round do
         &2,
         :private,
         &1,
-        {:new_hand, Enum.find(round.hands, fn x -> x.id == &2 end).hand}
+        {:new_hand, Enum.find(round.hands, fn x -> x.player_id == &1 end).hand}
       )
     )
   end
@@ -137,4 +142,18 @@ defmodule Perudo.Round do
       | instructions: [{:notify_player, visibility, player_id, data} | round.instructions]
     }
   end
+
+  defp instructions_and_state(round) do
+    round
+    |> tell_current_player_to_move()
+    |> take_instructions()
+  end
+
+  defp tell_current_player_to_move(%Round{current_player_id: nil} = round), do: round
+
+  defp tell_current_player_to_move(round),
+    do: notify_player(round, :public, round.current_player_id, :move)
+
+  defp take_instructions(round),
+    do: {Enum.reverse(round.instructions), %Round{round | instructions: []}}
 end

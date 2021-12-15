@@ -91,7 +91,6 @@ defmodule Perudo.Round do
         round
         |> notify_player(:public, round.current_player_id, {:new_bid, bid})
         |> find_next_player()
-        |> notify_player(:public, round.current_player_id, :move)
         |> instructions_and_state()
 
       {:error, round} ->
@@ -108,6 +107,18 @@ defmodule Perudo.Round do
   end
 
   defp outbid(%Round{current_bid: {0, 0}} = round, {_new_count, 1}), do: {:error, round}
+
+  defp outbid(%Round{current_bid: {current_count, current_die}} = round, {current_count, current_die}) do
+    {:error, round}
+  end
+
+  defp outbid(round, {_, 0}) do
+    {:error, round}
+  end
+
+  defp outbid(round, {0, _}) do
+    {:error, round}
+  end
 
   defp outbid(%Round{current_bid: {current_count, 1}} = round, {new_count, 1}) do
     case new_count > current_count do

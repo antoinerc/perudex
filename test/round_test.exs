@@ -12,8 +12,9 @@ defmodule RoundTest do
 
   test "initial round" do
     max_dice = 5
-    assert {notifications, r} = Round.start([1, 2], max_dice)
-    assert length(notifications) == 3
+    players = [1,2]
+    assert {notifications, r} = Round.start(players, max_dice)
+    assert length(notifications) == length(players) + 1
     [notification | rest] = notifications
     notifications = rest
     assert {:notify_player, :private, 1, {:new_hand, _}} = notification
@@ -26,8 +27,8 @@ defmodule RoundTest do
     assert %Round{
              instructions: [],
              max_dice: ^max_dice,
-             remaining_players: [1, 2],
-             all_players: [1, 2],
+             remaining_players: players,
+             all_players: players,
              hands: [_, _],
              current_bid: {0, 0}
            } = r
@@ -36,12 +37,15 @@ defmodule RoundTest do
   test "outbid move to next player" do
     {_, initial_round} = Round.start([1, 2], 5)
     assert %Round{current_player_id: 1} = initial_round
+
     assert {instructions, new_round} = Round.move(initial_round, 1, {:outbid, {2, 2}})
     assert %Round{current_player_id: 2, current_bid: {2, 2}} = new_round
     assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
+
     assert {instructions, new_round} = Round.move(new_round, 2, {:outbid, {3, 3}})
     assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
     assert %Round{current_player_id: 1, current_bid: {3, 3}} = new_round
+
     assert {instructions, new_round} = Round.move(new_round, 1, {:outbid, {4, 4}})
     assert %Round{current_player_id: 2, current_bid: {4, 4}} = new_round
     assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
@@ -84,6 +88,17 @@ defmodule RoundTest do
     assert {instructions, round} = Round.move(round, 1, {:outbid, {3, 1}})
     assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
     assert Enum.member?(instructions, notify_player_instruction(:public, 1, :illegal_bid))
+  end
+
+  test "cannot outbid with same bid" do
+    {_, round} = Round.start([1, 2], 5)
+    assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
+    assert {instructions, round} = Round.move(round, 1, {:outbid, {3, 2}})
+    assert %Round{current_player_id: 2, current_bid: {3, 2}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+    assert {instructions, round} = Round.move(round, 2, {:outbid, {3, 2}})
+    assert %Round{current_player_id: 2, current_bid: {3, 2}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :illegal_bid))
   end
 
   test "cannot outbid with face 1 die when new count lower then half the actual count" do

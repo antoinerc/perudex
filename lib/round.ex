@@ -109,43 +109,44 @@ defmodule Perudo.Round do
 
   defp outbid(%Round{current_bid: {0, 0}} = round, {_new_count, 1}), do: {:error, round}
 
-  defp outbid(%Round{current_bid: {current_count, _current_die}} = round, {new_count, 1}) do
-    case new_count < ceil(current_count / 2) do
+  defp outbid(%Round{current_bid: {current_count, 1}} = round, {new_count, 1}) do
+    case new_count > current_count do
       true ->
-        {:error, round}
+        {:ok, %Round{round | instructions: [], current_bid: {new_count, 1}}}
 
       _ ->
-        {:ok, %Round{round | instructions: [], current_bid: {new_count, 1}}}
+        {:error, round}
     end
   end
 
-  defp outbid(%Round{current_bid: {current_count, 1}} = round, {new_count, 1}) do
-    case new_count <= current_count do
+  defp outbid(%Round{current_bid: {current_count, _current_die}} = round, {new_count, 1}) do
+    case new_count >= ceil(current_count / 2) do
       true ->
-        {:error, round}
+        {:ok, %Round{round | instructions: [], current_bid: {new_count, 1}}}
 
       _ ->
-        {:ok, %Round{round | instructions: [], current_bid: {new_count, 1}}}
+        {:error, round}
     end
   end
 
   defp outbid(%Round{current_bid: {current_count, 1}} = round, {new_count, new_die}) do
-    case new_count < current_count * 2 + 1 do
+    case new_count >= current_count * 2 + 1 do
       true ->
-        {:error, round}
+        {:ok, %Round{round | instructions: [], current_bid: {new_count, new_die}}}
 
       _ ->
-        {:ok, %Round{round | instructions: [], current_bid: {new_count, new_die}}}
+        {:error, round}
     end
   end
 
   defp outbid(%Round{current_bid: {current_count, current_die}} = round, {new_count, new_die}) do
-    case new_count <= current_count && new_die <= current_die do
+    case (new_count >= current_count && new_die > current_die) ||
+           (new_count > current_count && new_die >= current_die) do
       true ->
-        {:error, round}
+        {:ok, %Round{round | instructions: [], current_bid: {new_count, new_die}}}
 
       _ ->
-        {:ok, %Round{round | instructions: [], current_bid: {new_count, new_die}}}
+        {:error, round}
     end
   end
 

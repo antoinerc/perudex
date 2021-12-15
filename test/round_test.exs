@@ -52,9 +52,30 @@ defmodule RoundTest do
     assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
     assert {_, round} = Round.move(round, 1, {:outbid, {2, 2}})
     assert %Round{current_player_id: 2, current_bid: {2, 2}} = round
+
     assert {instructions, round} = Round.move(round, 2, {:outbid, {2, 2}})
     assert %Round{current_player_id: 2, current_bid: {2, 2}} = round
     assert Enum.member?(instructions, notify_player_instruction(:public, 2, :illegal_bid))
+
+    assert {instructions, round} = Round.move(round, 2, {:outbid, {4, 4}})
+    assert %Round{current_player_id: 1, current_bid: {4, 4}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
+
+    assert {instructions, round} = Round.move(round, 1, {:outbid, {6, 2}})
+    assert %Round{current_player_id: 1, current_bid: {4, 4}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :illegal_bid))
+
+    assert {instructions, round} = Round.move(round, 1, {:outbid, {6, 4}})
+    assert %Round{current_player_id: 2, current_bid: {6, 4}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+
+    assert {instructions, round} = Round.move(round, 2, {:outbid, {3, 1}})
+    assert %Round{current_player_id: 1, current_bid: {3, 1}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
+
+    assert {instructions, round} = Round.move(round, 1, {:outbid, {2, 1}})
+    assert %Round{current_player_id: 1, current_bid: {3, 1}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :illegal_bid))
   end
 
   test "cannot outbid with face 1 die on start of round" do
@@ -71,9 +92,11 @@ defmodule RoundTest do
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {5, 5}})
     assert %Round{current_player_id: 2, current_bid: {5, 5}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
 
     assert {instructions, round} = Round.move(round, 2, {:outbid, {2, 1}})
     assert %Round{current_player_id: 2, current_bid: {5, 5}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :illegal_bid))
   end
 
   test "outbid with face 1 die" do
@@ -87,6 +110,10 @@ defmodule RoundTest do
     assert {instructions, round} = Round.move(round, 2, {:outbid, {2, 1}})
     assert %Round{current_player_id: 1, current_bid: {2, 1}} = round
     assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
+
+    assert {instructions, round} = Round.move(round, 1, {:outbid, {5, 1}})
+    assert %Round{current_player_id: 2, current_bid: {5, 1}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
   end
 
   test "outbid" do
@@ -95,17 +122,22 @@ defmodule RoundTest do
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {5, 5}})
     assert %Round{current_player_id: 2, current_bid: {5, 5}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
 
     assert {instructions, round} = Round.move(round, 2, {:outbid, {3, 1}})
     assert %Round{current_player_id: 1, current_bid: {3, 1}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {7, 5}})
     assert %Round{current_player_id: 2, current_bid: {7, 5}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
 
     assert {instructions, round} = Round.move(round, 2, {:outbid, {4, 1}})
     assert %Round{current_player_id: 1, current_bid: {4, 1}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {5, 1}})
     assert %Round{current_player_id: 2, current_bid: {5, 1}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
   end
 end

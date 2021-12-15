@@ -40,15 +40,15 @@ defmodule RoundTest do
 
     assert {instructions, new_round} = Round.move(initial_round, 1, {:outbid, {2, 2}})
     assert %Round{current_player_id: 2, current_bid: {2, 2}} = new_round
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
 
     assert {instructions, new_round} = Round.move(new_round, 2, {:outbid, {3, 3}})
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
     assert %Round{current_player_id: 1, current_bid: {3, 3}} = new_round
 
     assert {instructions, new_round} = Round.move(new_round, 1, {:outbid, {4, 4}})
     assert %Round{current_player_id: 2, current_bid: {4, 4}} = new_round
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
   end
 
   test "outbid does not move to next player if bid illegal" do
@@ -153,6 +153,6 @@ defmodule RoundTest do
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {5, 1}})
     assert %Round{current_player_id: 2, current_bid: {5, 1}} = round
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
   end
 end

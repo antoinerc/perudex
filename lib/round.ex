@@ -33,7 +33,7 @@ defmodule Perudo.Round do
           :move
           | {:remove_die, player_id}
           | {:add_die, player_id}
-          | :reveal_hands
+          | {:reveal_hands, [DiceHand.t()]}
           | {:new_bid, bid()}
           | :unauthorized_move
           | :illegal_bid
@@ -41,6 +41,8 @@ defmodule Perudo.Round do
           | {:new_hand, DiceHand.t()}
           | :successful_calza
           | :unsuccessful_calza
+          | :winner
+          | :loser
 
   @type visibility :: :private | :public
 
@@ -62,8 +64,15 @@ defmodule Perudo.Round do
     %Round{
       round
       | hands:
-          Enum.map(round.remaining_players, fn p -> %{player_id: p, hand: DiceHand.new(5)} end)
+          Enum.map(round.remaining_players, fn p ->
+            %{player_id: p, hand: DiceHand.new(round.max_dice)}
+          end)
     }
+  end
+
+  defp start_new_round(%Round{remaining_players: [winner]} = round, _) do
+    %Round{round | current_player_id: nil, hands: [], current_bid: nil}
+    |> notify_player(:public, winner, :winner)
   end
 
   defp start_new_round(round, next_player) do
@@ -122,9 +131,12 @@ defmodule Perudo.Round do
   end
 
   defp handle_move(round, :calza) do
+    round = reveal_hands(round)
+
     case calza(round) do
       {:ok, round, succes_status} ->
         round
+        |> check_for_loser()
         |> start_new_round(round.current_player_id)
         |> notify_player(:public, round.current_player_id, succes_status)
         |> instructions_and_state()
@@ -137,6 +149,61 @@ defmodule Perudo.Round do
   end
 
   defp handle_move(round, :dudo) do
+    round = reveal_hands(round)
+
+    case dudo(round) do
+      {:ok, round, success_status} ->
+        round
+        |> check_for_loser()
+        |> start_new_round(round.current_player_id)
+        |> notify_player(:public, round.current_player_id, success_status)
+        |> instructions_and_state()
+
+      {:error, round} ->
+        round
+        |> notify_player(:public, round.current_player_id, :illegal_move)
+        |> instructions_and_state()
+    end
+  end
+
+  defp dudo(%Round{current_bid: {0, 0}} = round), do: {:error, round}
+
+  defp dudo(
+         %Round{
+           hands: hands,
+           current_bid: {current_count, current_die},
+           current_player_id: current_player
+         } = round
+       ) do
+    current_count_frequency = get_current_die_frequency(hands, current_die)
+    previous_player = find_previous_player(round)
+
+    case current_count_frequency < current_count do
+      true ->
+        {:ok,
+         %Round{
+           round
+           | current_player_id: previous_player,
+             hands:
+               Enum.map(hands, fn hand ->
+                 if hand.player_id == previous_player,
+                   do: %{hand | hand: DiceHand.take(hand.hand)},
+                   else: hand
+               end)
+         }, :successful_dudo}
+
+      _ ->
+        {:ok,
+         %Round{
+           round
+           | hands:
+               Enum.map(hands, fn hand ->
+                 if hand.player_id == current_player,
+                   do: %{hand | hand: DiceHand.take(hand.hand)},
+                   else: hand
+               end)
+         }, :unsuccessful_dudo}
+    end
   end
 
   defp calza(%Round{current_bid: {0, 0}} = round), do: {:error, round}
@@ -148,16 +215,14 @@ defmodule Perudo.Round do
            current_player_id: current_player
          } = round
        ) do
-    dice_frequencies = get_dice_frequencies(hands)
-    current_count_frequency = dice_frequencies[current_die]
+    current_count_frequency = get_current_die_frequency(hands, current_die)
+
     case current_count_frequency == current_count do
       true ->
         {:ok,
          %Round{
            round
-           | instructions: [],
-             current_bid: {0, 0},
-             hands:
+           | hands:
                Enum.map(hands, fn hand ->
                  if hand.player_id == current_player,
                    do: %{hand | hand: DiceHand.add(hand.hand, :rand.uniform(6))},
@@ -166,17 +231,16 @@ defmodule Perudo.Round do
          }, :successful_calza}
 
       _ ->
-        {:ok, %Round{
-          round
-          | instructions: [],
-            current_bid: {0, 0},
-            hands:
-              Enum.map(hands, fn hand ->
-                if hand.player_id == current_player,
-                  do: %{hand | hand: DiceHand.take(hand.hand)},
-                  else: hand
-              end)
-        }, :unsuccessful_calza}
+        {:ok,
+         %Round{
+           round
+           | hands:
+               Enum.map(hands, fn hand ->
+                 if hand.player_id == current_player,
+                   do: %{hand | hand: DiceHand.take(hand.hand)},
+                   else: hand
+               end)
+         }, :unsuccessful_calza}
     end
   end
 
@@ -238,23 +302,58 @@ defmodule Perudo.Round do
     end
   end
 
+  defp reveal_hands(round) do
+    notify_player(round, :public, 1, {:reveal_hands, round.hands})
+  end
+
+  defp find_next_player(%Round{remaining_players: [winner]} = round) do
+    %Round{round | current_player_id: winner}
+  end
+
   defp find_next_player(round) do
     current_player_index =
       Enum.find_index(round.remaining_players, fn id -> id == round.current_player_id end)
 
-    next_player = Enum.at(round.remaining_players, current_player_index + 1)
-
     next_player =
-      case next_player == nil do
-        true ->
-          [next_player | _] = round.remaining_players
-          next_player
-
-        false ->
-          next_player
-      end
+      Enum.at(round.remaining_players, current_player_index + 1, hd(round.remaining_players))
 
     %Round{round | current_player_id: next_player}
+  end
+
+  defp find_previous_player(round) do
+    current_player_index =
+      Enum.find_index(round.remaining_players, fn id -> id == round.current_player_id end)
+
+    Enum.at(round.remaining_players, current_player_index - 1, hd(round.remaining_players))
+  end
+
+  defp check_for_loser(%Round{} = round) do
+    loser = Enum.find(round.hands, fn hand -> hand.hand.remaining_dice == 0 end)
+
+    case loser != nil do
+      true ->
+        %Round{
+          round
+          | remaining_players:
+              Enum.filter(round.remaining_players, fn player -> player != loser.player_id end)
+        }
+        |> find_next_player()
+        |> notify_player(:public, loser.player_id, :loser)
+
+      false ->
+        round
+    end
+  end
+
+  defp get_current_die_frequency(hands, current_die) do
+    dice_frequencies = get_dice_frequencies(hands)
+    dice_frequencies[current_die]
+  end
+
+  defp get_dice_frequencies(hands) do
+    hands
+    |> Enum.flat_map(fn %{hand: hand} -> hand.dice end)
+    |> Enum.frequencies()
   end
 
   defp notify_player(round, visibility, player_id, data) do
@@ -277,10 +376,4 @@ defmodule Perudo.Round do
 
   defp take_instructions(round),
     do: {Enum.reverse(round.instructions), %Round{round | instructions: []}}
-
-  defp get_dice_frequencies(hands) do
-    hands
-    |> Enum.flat_map(fn %{hand: hand} -> hand.dice end)
-    |> Enum.frequencies()
-  end
 end

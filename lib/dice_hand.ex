@@ -15,7 +15,7 @@ defmodule Perudo.DiceHand do
       dice:
         for _ <- 1..remaining_dice do
           :rand.uniform(6)
-        end,
+        end
     }
   end
 
@@ -35,7 +35,9 @@ defmodule Perudo.DiceHand do
     case length(dice) < 5 do
       true ->
         %DiceHand{hand | dice: [die | dice], remaining_dice: remaining_dice + 1}
-      _ -> hand
+
+      _ ->
+        hand
     end
   end
 

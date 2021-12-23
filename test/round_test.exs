@@ -3,6 +3,7 @@ defmodule RoundTest do
   doctest Perudo.Round
 
   alias Perudo.Round
+  alias Perudo.DiceHand
 
   defmacrop notify_player_instruction(visibility, player_id, data) do
     quote do
@@ -153,6 +154,75 @@ defmodule RoundTest do
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {5, 1}})
     assert %Round{current_player_id: 2, current_bid: {5, 1}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+  end
+
+  test "cannot calza at start of round" do
+    {_, round} = Round.start([1, 2], 5)
+    assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
+
+    assert {instructions, round} = Round.move(round, 1, :calza)
+    assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :illegal_move))
+  end
+
+  test "calza gives a dice back to the player if he's right" do
+    {_, round} = Round.start([1, 2], 5)
+    assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
+
+    p1_hand = Enum.at(round.hands, 0)
+    p1_hand = %{p1_hand | hand: %DiceHand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p2_hand = Enum.at(round.hands, 1)
+    p2_hand = %{p2_hand | hand: %DiceHand{p2_hand.hand | dice: [5, 5, 5, 5], remaining_dice: 4}}
+    round = %Round{round | hands: List.replace_at(round.hands, 0, p1_hand)}
+    round = %Round{round | hands: List.replace_at(round.hands, 1, p2_hand)}
+
+    assert {instructions, round} = Round.move(round, 1, {:outbid, {9, 5}})
+    assert %Round{current_player_id: 2, current_bid: {9, 5}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+
+    assert {instructions, round} = Round.move(round, 2, :calza)
+    assert %Round{current_player_id: 2, current_bid: {0, 0}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :successful_calza))
+    assert length(Enum.at(round.hands, 1).hand.dice) == 5
+    assert Enum.at(round.hands, 1).hand.remaining_dice == 5
+  end
+
+  test "calza takes a dice if the player is wrong" do
+    {_, round} = Round.start([1, 2], 5)
+    assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
+
+    p1_hand = Enum.at(round.hands, 0)
+    p1_hand = %{p1_hand | hand: %DiceHand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p2_hand = Enum.at(round.hands, 1)
+    p2_hand = %{p2_hand | hand: %DiceHand{p2_hand.hand | dice: [5, 5, 5, 5, 5], remaining_dice: 5}}
+    round = %Round{round | hands: List.replace_at(round.hands, 0, p1_hand)}
+    round = %Round{round | hands: List.replace_at(round.hands, 1, p2_hand)}
+
+    assert {instructions, round} = Round.move(round, 1, {:outbid, {9, 5}})
+    assert %Round{current_player_id: 2, current_bid: {9, 5}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+
+    assert {instructions, round} = Round.move(round, 2, :calza)
+    assert %Round{current_player_id: 2, current_bid: {0, 0}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :unsuccessful_calza))
+
+    assert length(Enum.at(round.hands, 1).hand.dice) == 4
+    assert Enum.at(round.hands, 1).hand.remaining_dice == 4
+  end
+
+  test "player that calls calza regardless of result is the next to play" do
+    {_, round} = Round.start([1, 2], 5)
+    assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
+
+    assert {instructions, round} = Round.move(round, 1, {:outbid, {9, 5}})
+    assert %Round{current_player_id: 2, current_bid: {9, 5}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+
+    assert {instructions, round} = Round.move(round, 2, :calza)
+    assert %Round{current_player_id: 2, current_bid: {0, 0}} = round
     assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
   end
 end

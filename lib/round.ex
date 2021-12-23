@@ -37,6 +37,7 @@ defmodule Perudo.Round do
           | {:new_bid, bid()}
           | :unauthorized_move
           | :illegal_bid
+          | :illegal_move
           | {:new_hand, DiceHand.t()}
           | :successful_calza
           | :unsuccessful_calza
@@ -75,7 +76,7 @@ defmodule Perudo.Round do
               player_id: p,
               hand:
                 DiceHand.new(
-                  Enum.find(round.hands, fn x -> x.player_id == p end).hand.holding_dice
+                  Enum.find(round.hands, fn x -> x.player_id == p end).hand.remaining_dice
                 )
             }
           end),
@@ -102,6 +103,7 @@ defmodule Perudo.Round do
   def move(round, player_id, _move) do
     %Round{round | instructions: []}
     |> notify_player(:public, player_id, :unauthorized_move)
+    |> instructions_and_state()
   end
 
   defp handle_move(round, {:outbid, bid}) do
@@ -129,7 +131,7 @@ defmodule Perudo.Round do
 
       {:error, round} ->
         round
-        |> notify_player(:public, round.current_player_id, :illegal_bid)
+        |> notify_player(:public, round.current_player_id, :illegal_move)
         |> instructions_and_state()
     end
   end

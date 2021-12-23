@@ -35,6 +35,16 @@ defmodule RoundTest do
            } = r
   end
 
+  test "unauthorized move" do
+    {_, initial_round} = Round.start([1, 2], 5)
+    assert %Round{current_player_id: 1} = initial_round
+
+    assert {_, new_round} = Round.move(initial_round, 1, {:outbid, {2, 2}})
+    assert {instructions, new_round} = Round.move(new_round, 1, {:outbid, {3, 3}})
+    assert %Round{current_player_id: 2, current_bid: {2, 2}} = new_round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :unauthorized_move))
+  end
+
   test "outbid move to next player" do
     {_, initial_round} = Round.start([1, 2], 5)
     assert %Round{current_player_id: 1} = initial_round

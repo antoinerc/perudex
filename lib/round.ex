@@ -31,8 +31,6 @@ defmodule Perudo.Round do
 
   @type player_instruction ::
           :move
-          | {:remove_die, player_id}
-          | {:add_die, player_id}
           | {:reveal_hands, [DiceHand.t()]}
           | {:new_bid, bid()}
           | :unauthorized_move
@@ -302,9 +300,7 @@ defmodule Perudo.Round do
     end
   end
 
-  defp reveal_hands(round) do
-    notify_player(round, :public, 1, {:reveal_hands, round.hands})
-  end
+  defp reveal_hands(round), do: notify_player(round, :public, 1, {:reveal_hands, round.hands})
 
   defp find_next_player(%Round{remaining_players: [winner]} = round) do
     %Round{round | current_player_id: winner}

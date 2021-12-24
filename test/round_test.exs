@@ -324,8 +324,8 @@ defmodule RoundTest do
   end
 
   test "when only one players remain, winner is announced" do
-    {_, round} = Round.start([1, 2], 1)
-    assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
+    {_, round} = Round.start(['a', 'b'], 1)
+    assert %Round{current_player_id: 'a', current_bid: {0, 0}} = round
 
     p1_hand = Enum.at(round.hands, 0)
     p1_hand = %{p1_hand | hand: %DiceHand{p1_hand.hand | dice: [5]}}
@@ -335,13 +335,13 @@ defmodule RoundTest do
     round = %Round{round | hands: List.replace_at(round.hands, 0, p1_hand)}
     round = %Round{round | hands: List.replace_at(round.hands, 1, p2_hand)}
 
-    assert {instructions, round} = Round.move(round, 1, {:outbid, {2, 5}})
-    assert %Round{current_player_id: 2, current_bid: {2, 5}} = round
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
+    assert {instructions, round} = Round.move(round, 'a', {:outbid, {2, 5}})
+    assert %Round{current_player_id: 'b', current_bid: {2, 5}} = round
+    assert Enum.member?(instructions, notify_player_instruction(:public, 'b', :move))
 
-    assert {instructions, round} = Round.move(round, 2, :dudo)
+    assert {instructions, round} = Round.move(round, 'b', :dudo)
     assert %Round{current_player_id: nil, current_bid: nil, hands: []} = round
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :winner))
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :loser))
+    assert Enum.member?(instructions, notify_player_instruction(:public, 'a', :winner))
+    assert Enum.member?(instructions, notify_player_instruction(:public, 'b', :loser))
   end
 end

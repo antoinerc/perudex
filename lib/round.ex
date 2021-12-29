@@ -1,14 +1,17 @@
 defmodule Perudo.Round do
+  @moduledoc """
+  Provides functions to manipulate a round of Perudo.
+  """
   alias __MODULE__
 
-  alias Perudo.DiceHand
+  alias Perudo.Hand
 
   defstruct [
     :current_player_id,
     :all_players,
     :remaining_players,
     :current_bid,
-    :hands,
+    :players_hands,
     :max_dice,
     :instructions
   ]
@@ -18,7 +21,7 @@ defmodule Perudo.Round do
           all_players: [player_id],
           current_bid: bid(),
           remaining_players: [player_id],
-          hands: [%{player_id: player_id, hand: DiceHand.t()}],
+          players_hands: [%{player_id: player_id, hand: Hand.t()}],
           max_dice: integer(),
           instructions: [instruction]
         }
@@ -31,12 +34,12 @@ defmodule Perudo.Round do
 
   @type player_instruction ::
           :move
-          | {:reveal_hands, [DiceHand.t()]}
+          | {:reveal_players_hands, [Hand.t()]}
           | {:new_bid, bid()}
           | :unauthorized_move
           | :illegal_bid
           | :illegal_move
-          | {:new_hand, DiceHand.t()}
+          | {:new_hand, Hand.t()}
           | :successful_calza
           | :unsuccessful_calza
           | :winner
@@ -49,27 +52,27 @@ defmodule Perudo.Round do
       current_player_id: hd(player_ids),
       all_players: player_ids,
       remaining_players: player_ids,
-      hands: [],
+      players_hands: [],
       max_dice: max_dice,
       instructions: []
     }
-    |> initialize_hands()
+    |> initialize_players_hands()
     |> start_new_round(hd(player_ids))
     |> instructions_and_state()
   end
 
-  defp initialize_hands(round) do
+  defp initialize_players_hands(round) do
     %Round{
       round
-      | hands:
+      | players_hands:
           Enum.map(round.remaining_players, fn p ->
-            %{player_id: p, hand: DiceHand.new(round.max_dice)}
+            %{player_id: p, hand: Hand.new(round.max_dice)}
           end)
     }
   end
 
   defp start_new_round(%Round{remaining_players: [winner]} = round, _) do
-    %Round{round | current_player_id: nil, hands: [], current_bid: nil}
+    %Round{round | current_player_id: nil, players_hands: [], current_bid: nil}
     |> notify_player(:public, winner, :winner)
   end
 
@@ -77,14 +80,11 @@ defmodule Perudo.Round do
     round = %Round{
       round
       | current_player_id: next_player,
-        hands:
+        players_hands:
           Enum.map(round.remaining_players, fn p ->
             %{
               player_id: p,
-              hand:
-                DiceHand.new(
-                  Enum.find(round.hands, fn x -> x.player_id == p end).hand.remaining_dice
-                )
+              hand: Hand.new(Enum.find(round.players_hands, fn x -> x.player_id == p end).hand)
             }
           end),
         current_bid: {0, 0}
@@ -97,7 +97,7 @@ defmodule Perudo.Round do
         &2,
         :private,
         &1,
-        {:new_hand, Enum.find(round.hands, fn x -> x.player_id == &1 end).hand}
+        {:new_hand, Enum.find(round.players_hands, fn x -> x.player_id == &1 end).hand}
       )
     )
   end
@@ -129,7 +129,7 @@ defmodule Perudo.Round do
   end
 
   defp handle_move(round, :calza) do
-    round = reveal_hands(round)
+    round = reveal_players_hands(round)
 
     case calza(round) do
       {:ok, round, succes_status} ->
@@ -147,7 +147,7 @@ defmodule Perudo.Round do
   end
 
   defp handle_move(round, :dudo) do
-    round = reveal_hands(round)
+    round = reveal_players_hands(round)
 
     case dudo(round) do
       {:ok, round, success_status} ->
@@ -168,12 +168,12 @@ defmodule Perudo.Round do
 
   defp dudo(
          %Round{
-           hands: hands,
+           players_hands: players_hands,
            current_bid: {current_count, current_die},
            current_player_id: current_player
          } = round
        ) do
-    current_count_frequency = get_current_die_frequency(hands, current_die)
+    current_count_frequency = get_current_die_frequency(players_hands, current_die)
     previous_player = find_previous_player(round)
 
     case current_count_frequency < current_count do
@@ -182,10 +182,10 @@ defmodule Perudo.Round do
          %Round{
            round
            | current_player_id: previous_player,
-             hands:
-               Enum.map(hands, fn hand ->
+             players_hands:
+               Enum.map(players_hands, fn hand ->
                  if hand.player_id == previous_player,
-                   do: %{hand | hand: DiceHand.take(hand.hand)},
+                   do: %{hand | hand: Hand.take(hand.hand)},
                    else: hand
                end)
          }, :successful_dudo}
@@ -194,10 +194,10 @@ defmodule Perudo.Round do
         {:ok,
          %Round{
            round
-           | hands:
-               Enum.map(hands, fn hand ->
+           | players_hands:
+               Enum.map(players_hands, fn hand ->
                  if hand.player_id == current_player,
-                   do: %{hand | hand: DiceHand.take(hand.hand)},
+                   do: %{hand | hand: Hand.take(hand.hand)},
                    else: hand
                end)
          }, :unsuccessful_dudo}
@@ -208,23 +208,23 @@ defmodule Perudo.Round do
 
   defp calza(
          %Round{
-           hands: hands,
+           players_hands: players_hands,
            current_bid: {current_count, current_die},
            current_player_id: current_player
          } = round
        ) do
-    current_count_frequency = get_current_die_frequency(hands, current_die)
+    current_count_frequency = get_current_die_frequency(players_hands, current_die)
 
     case current_count_frequency == current_count do
       true ->
         {:ok,
          %Round{
            round
-           | hands:
-               Enum.map(hands, fn hand ->
-                 if hand.player_id == current_player,
-                   do: %{hand | hand: DiceHand.add(hand.hand, :rand.uniform(6))},
-                   else: hand
+           | players_hands:
+               Enum.map(players_hands, fn player_hand ->
+                 if player_hand.player_id == current_player,
+                   do: %{player_hand | hand: Hand.add(player_hand.hand)},
+                   else: player_hand
                end)
          }, :successful_calza}
 
@@ -232,11 +232,11 @@ defmodule Perudo.Round do
         {:ok,
          %Round{
            round
-           | hands:
-               Enum.map(hands, fn hand ->
-                 if hand.player_id == current_player,
-                   do: %{hand | hand: DiceHand.take(hand.hand)},
-                   else: hand
+           | players_hands:
+               Enum.map(players_hands, fn player_hand ->
+                 if player_hand.player_id == current_player,
+                   do: %{player_hand | hand: Hand.take(player_hand.hand)},
+                   else: player_hand
                end)
          }, :unsuccessful_calza}
     end
@@ -300,7 +300,8 @@ defmodule Perudo.Round do
     end
   end
 
-  defp reveal_hands(round), do: notify_player(round, :public, 1, {:reveal_hands, round.hands})
+  defp reveal_players_hands(round),
+    do: notify_player(round, :public, 1, {:reveal_players_hands, round.players_hands})
 
   defp find_next_player(%Round{remaining_players: [winner]} = round) do
     %Round{round | current_player_id: winner}
@@ -324,7 +325,7 @@ defmodule Perudo.Round do
   end
 
   defp check_for_loser(%Round{} = round) do
-    loser = Enum.find(round.hands, fn hand -> hand.hand.remaining_dice == 0 end)
+    loser = Enum.find(round.players_hands, fn hand -> hand.hand.remaining_dice == 0 end)
 
     case loser != nil do
       true ->
@@ -341,13 +342,13 @@ defmodule Perudo.Round do
     end
   end
 
-  defp get_current_die_frequency(hands, current_die) do
-    dice_frequencies = get_dice_frequencies(hands)
+  defp get_current_die_frequency(players_hands, current_die) do
+    dice_frequencies = get_dice_frequencies(players_hands)
     dice_frequencies[current_die]
   end
 
-  defp get_dice_frequencies(hands) do
-    hands
+  defp get_dice_frequencies(players_hands) do
+    players_hands
     |> Enum.flat_map(fn %{hand: hand} -> hand.dice end)
     |> Enum.frequencies()
   end

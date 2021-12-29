@@ -3,7 +3,7 @@ defmodule RoundTest do
   doctest Perudo.Round
 
   alias Perudo.Round
-  alias Perudo.DiceHand
+  alias Perudo.Hand
 
   defmacrop notify_player_instruction(visibility, player_id, data) do
     quote do
@@ -30,7 +30,7 @@ defmodule RoundTest do
              max_dice: ^max_dice,
              remaining_players: players,
              all_players: players,
-             hands: [_, _],
+             players_hands: [_, _],
              current_bid: {0, 0}
            } = r
   end
@@ -180,12 +180,12 @@ defmodule RoundTest do
     {_, round} = Round.start([1, 2], 5)
     assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
 
-    p1_hand = Enum.at(round.hands, 0)
-    p1_hand = %{p1_hand | hand: %DiceHand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
-    p2_hand = Enum.at(round.hands, 1)
-    p2_hand = %{p2_hand | hand: %DiceHand{p2_hand.hand | dice: [5, 5, 5, 5], remaining_dice: 4}}
-    round = %Round{round | hands: List.replace_at(round.hands, 0, p1_hand)}
-    round = %Round{round | hands: List.replace_at(round.hands, 1, p2_hand)}
+    p1_hand = Enum.at(round.players_hands, 0)
+    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p2_hand = Enum.at(round.players_hands, 1)
+    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [5, 5, 5, 5], remaining_dice: 4}}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 0, p1_hand)}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 1, p2_hand)}
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {9, 5}})
     assert %Round{current_player_id: 2, current_bid: {9, 5}} = round
@@ -195,12 +195,12 @@ defmodule RoundTest do
     assert %Round{current_player_id: 2, current_bid: {0, 0}} = round
     assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
     assert Enum.member?(instructions, notify_player_instruction(:public, 2, :successful_calza))
-    assert length(Enum.at(round.hands, 1).hand.dice) == 5
-    assert Enum.at(round.hands, 1).hand.remaining_dice == 5
+    assert length(Enum.at(round.players_hands, 1).hand.dice) == 5
+    assert Enum.at(round.players_hands, 1).hand.remaining_dice == 5
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_hands, _}), &1)
+             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -208,17 +208,17 @@ defmodule RoundTest do
     {_, round} = Round.start([1, 2], 5)
     assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
 
-    p1_hand = Enum.at(round.hands, 0)
-    p1_hand = %{p1_hand | hand: %DiceHand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
-    p2_hand = Enum.at(round.hands, 1)
+    p1_hand = Enum.at(round.players_hands, 0)
+    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p2_hand = Enum.at(round.players_hands, 1)
 
     p2_hand = %{
       p2_hand
-      | hand: %DiceHand{p2_hand.hand | dice: [5, 5, 5, 5, 5], remaining_dice: 5}
+      | hand: %Hand{p2_hand.hand | dice: [5, 5, 5, 5, 5], remaining_dice: 5}
     }
 
-    round = %Round{round | hands: List.replace_at(round.hands, 0, p1_hand)}
-    round = %Round{round | hands: List.replace_at(round.hands, 1, p2_hand)}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 0, p1_hand)}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 1, p2_hand)}
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {9, 5}})
     assert %Round{current_player_id: 2, current_bid: {9, 5}} = round
@@ -229,12 +229,12 @@ defmodule RoundTest do
     assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
     assert Enum.member?(instructions, notify_player_instruction(:public, 2, :unsuccessful_calza))
 
-    assert length(Enum.at(round.hands, 1).hand.dice) == 4
-    assert Enum.at(round.hands, 1).hand.remaining_dice == 4
+    assert length(Enum.at(round.players_hands, 1).hand.dice) == 4
+    assert Enum.at(round.players_hands, 1).hand.remaining_dice == 4
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_hands, _}), &1)
+             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -252,7 +252,7 @@ defmodule RoundTest do
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_hands, _}), &1)
+             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -269,13 +269,13 @@ defmodule RoundTest do
     {_, round} = Round.start([1, 2], 5)
     assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
 
-    p1_hand = Enum.at(round.hands, 0)
-    p1_hand = %{p1_hand | hand: %DiceHand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
-    p2_hand = Enum.at(round.hands, 1)
-    p2_hand = %{p2_hand | hand: %DiceHand{p2_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p1_hand = Enum.at(round.players_hands, 0)
+    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p2_hand = Enum.at(round.players_hands, 1)
+    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [5, 5, 5, 5, 5]}}
 
-    round = %Round{round | hands: List.replace_at(round.hands, 0, p1_hand)}
-    round = %Round{round | hands: List.replace_at(round.hands, 1, p2_hand)}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 0, p1_hand)}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 1, p2_hand)}
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {9, 5}})
     assert %Round{current_player_id: 2, current_bid: {9, 5}} = round
@@ -285,12 +285,12 @@ defmodule RoundTest do
     assert %Round{current_player_id: 2, current_bid: {0, 0}} = round
     assert Enum.member?(instructions, notify_player_instruction(:public, 2, :move))
     assert Enum.member?(instructions, notify_player_instruction(:public, 2, :unsuccessful_dudo))
-    assert length(Enum.at(round.hands, 1).hand.dice) == 4
-    assert Enum.at(round.hands, 1).hand.remaining_dice == 4
+    assert length(Enum.at(round.players_hands, 1).hand.dice) == 4
+    assert Enum.at(round.players_hands, 1).hand.remaining_dice == 4
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_hands, _}), &1)
+             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -298,13 +298,13 @@ defmodule RoundTest do
     {_, round} = Round.start([1, 2], 5)
     assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
 
-    p1_hand = Enum.at(round.hands, 0)
-    p1_hand = %{p1_hand | hand: %DiceHand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
-    p2_hand = Enum.at(round.hands, 1)
-    p2_hand = %{p2_hand | hand: %DiceHand{p2_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p1_hand = Enum.at(round.players_hands, 0)
+    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p2_hand = Enum.at(round.players_hands, 1)
+    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [5, 5, 5, 5, 5]}}
 
-    round = %Round{round | hands: List.replace_at(round.hands, 0, p1_hand)}
-    round = %Round{round | hands: List.replace_at(round.hands, 1, p2_hand)}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 0, p1_hand)}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 1, p2_hand)}
 
     assert {instructions, round} = Round.move(round, 1, {:outbid, {11, 5}})
     assert %Round{current_player_id: 2, current_bid: {11, 5}} = round
@@ -314,12 +314,12 @@ defmodule RoundTest do
     assert %Round{current_player_id: 1, current_bid: {0, 0}} = round
     assert Enum.member?(instructions, notify_player_instruction(:public, 1, :move))
     assert Enum.member?(instructions, notify_player_instruction(:public, 1, :successful_dudo))
-    assert length(Enum.at(round.hands, 0).hand.dice) == 4
-    assert Enum.at(round.hands, 0).hand.remaining_dice == 4
+    assert length(Enum.at(round.players_hands, 0).hand.dice) == 4
+    assert Enum.at(round.players_hands, 0).hand.remaining_dice == 4
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_hands, _}), &1)
+             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -327,20 +327,20 @@ defmodule RoundTest do
     {_, round} = Round.start(['a', 'b'], 1)
     assert %Round{current_player_id: 'a', current_bid: {0, 0}} = round
 
-    p1_hand = Enum.at(round.hands, 0)
-    p1_hand = %{p1_hand | hand: %DiceHand{p1_hand.hand | dice: [5]}}
-    p2_hand = Enum.at(round.hands, 1)
-    p2_hand = %{p2_hand | hand: %DiceHand{p2_hand.hand | dice: [5]}}
+    p1_hand = Enum.at(round.players_hands, 0)
+    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [5]}}
+    p2_hand = Enum.at(round.players_hands, 1)
+    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [5]}}
 
-    round = %Round{round | hands: List.replace_at(round.hands, 0, p1_hand)}
-    round = %Round{round | hands: List.replace_at(round.hands, 1, p2_hand)}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 0, p1_hand)}
+    round = %Round{round | players_hands: List.replace_at(round.players_hands, 1, p2_hand)}
 
     assert {instructions, round} = Round.move(round, 'a', {:outbid, {2, 5}})
     assert %Round{current_player_id: 'b', current_bid: {2, 5}} = round
     assert Enum.member?(instructions, notify_player_instruction(:public, 'b', :move))
 
     assert {instructions, round} = Round.move(round, 'b', :dudo)
-    assert %Round{current_player_id: nil, current_bid: nil, hands: []} = round
+    assert %Round{current_player_id: nil, current_bid: nil, players_hands: []} = round
     assert Enum.member?(instructions, notify_player_instruction(:public, 'a', :winner))
     assert Enum.member?(instructions, notify_player_instruction(:public, 'b', :loser))
   end

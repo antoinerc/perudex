@@ -1,6 +1,6 @@
-defmodule Perudo.Round do
+defmodule Perudo.Game do
   @moduledoc """
-  Provides functions to manipulate a round of Perudo.
+  Provides functions to manipulate a game of Perudo.
   """
   alias __MODULE__
 
@@ -16,7 +16,7 @@ defmodule Perudo.Round do
     :instructions
   ]
 
-  @type t :: %Round{
+  @type t :: %Game{
           current_player_id: player_id,
           all_players: [player_id],
           current_bid: bid(),
@@ -48,7 +48,7 @@ defmodule Perudo.Round do
   @type visibility :: :private | :public
 
   def start(player_ids, max_dice) do
-    %Round{
+    %Game{
       current_player_id: hd(player_ids),
       all_players: player_ids,
       remaining_players: player_ids,
@@ -57,130 +57,130 @@ defmodule Perudo.Round do
       instructions: []
     }
     |> initialize_players_hands()
-    |> start_new_round(hd(player_ids))
+    |> start_new_game(hd(player_ids))
     |> instructions_and_state()
   end
 
-  defp initialize_players_hands(round) do
-    %Round{
-      round
+  defp initialize_players_hands(game) do
+    %Game{
+      game
       | players_hands:
-          Enum.map(round.remaining_players, fn p ->
-            %{player_id: p, hand: Hand.new(round.max_dice)}
+          Enum.map(game.remaining_players, fn p ->
+            %{player_id: p, hand: Hand.new(game.max_dice)}
           end)
     }
   end
 
-  defp start_new_round(%Round{remaining_players: [winner]} = round, _) do
-    %Round{round | current_player_id: nil, players_hands: [], current_bid: nil}
+  defp start_new_game(%Game{remaining_players: [winner]} = game, _) do
+    %Game{game | current_player_id: nil, players_hands: [], current_bid: nil}
     |> notify_player(:public, winner, :winner)
   end
 
-  defp start_new_round(round, next_player) do
-    round = %Round{
-      round
+  defp start_new_game(game, next_player) do
+    game = %Game{
+      game
       | current_player_id: next_player,
         players_hands:
-          Enum.map(round.remaining_players, fn p ->
+          Enum.map(game.remaining_players, fn p ->
             %{
               player_id: p,
-              hand: Hand.new(Enum.find(round.players_hands, fn x -> x.player_id == p end).hand)
+              hand: Hand.new(Enum.find(game.players_hands, fn x -> x.player_id == p end).hand)
             }
           end),
         current_bid: {0, 0}
     }
 
     Enum.reduce(
-      round.remaining_players,
-      round,
+      game.remaining_players,
+      game,
       &notify_player(
         &2,
         :private,
         &1,
-        {:new_hand, Enum.find(round.players_hands, fn x -> x.player_id == &1 end).hand}
+        {:new_hand, Enum.find(game.players_hands, fn x -> x.player_id == &1 end).hand}
       )
     )
   end
 
-  def move(%Round{current_player_id: player_id} = round, player_id, move) do
-    %Round{round | instructions: []}
+  def move(%Game{current_player_id: player_id} = game, player_id, move) do
+    %Game{game | instructions: []}
     |> handle_move(move)
   end
 
-  def move(round, player_id, _move) do
-    %Round{round | instructions: []}
+  def move(game, player_id, _move) do
+    %Game{game | instructions: []}
     |> notify_player(:public, player_id, :unauthorized_move)
     |> instructions_and_state()
   end
 
-  defp handle_move(round, {:outbid, bid}) do
-    case outbid(round, bid) do
-      {:ok, round} ->
-        round
-        |> notify_player(:public, round.current_player_id, {:new_bid, bid})
+  defp handle_move(game, {:outbid, bid}) do
+    case outbid(game, bid) do
+      {:ok, game} ->
+        game
+        |> notify_player(:public, game.current_player_id, {:new_bid, bid})
         |> find_next_player()
         |> instructions_and_state()
 
-      {:error, round} ->
-        round
-        |> notify_player(:public, round.current_player_id, :illegal_bid)
+      {:error, game} ->
+        game
+        |> notify_player(:public, game.current_player_id, :illegal_bid)
         |> instructions_and_state()
     end
   end
 
-  defp handle_move(round, :calza) do
-    round = reveal_players_hands(round)
+  defp handle_move(game, :calza) do
+    game = reveal_players_hands(game)
 
-    case calza(round) do
-      {:ok, round, succes_status} ->
-        round
+    case calza(game) do
+      {:ok, game, succes_status} ->
+        game
         |> check_for_loser()
-        |> start_new_round(round.current_player_id)
-        |> notify_player(:public, round.current_player_id, succes_status)
+        |> start_new_game(game.current_player_id)
+        |> notify_player(:public, game.current_player_id, succes_status)
         |> instructions_and_state()
 
-      {:error, round} ->
-        round
-        |> notify_player(:public, round.current_player_id, :illegal_move)
+      {:error, game} ->
+        game
+        |> notify_player(:public, game.current_player_id, :illegal_move)
         |> instructions_and_state()
     end
   end
 
-  defp handle_move(round, :dudo) do
-    round = reveal_players_hands(round)
+  defp handle_move(game, :dudo) do
+    game = reveal_players_hands(game)
 
-    case dudo(round) do
-      {:ok, round, success_status} ->
-        round
+    case dudo(game) do
+      {:ok, game, success_status} ->
+        game
         |> check_for_loser()
-        |> start_new_round(round.current_player_id)
-        |> notify_player(:public, round.current_player_id, success_status)
+        |> start_new_game(game.current_player_id)
+        |> notify_player(:public, game.current_player_id, success_status)
         |> instructions_and_state()
 
-      {:error, round} ->
-        round
-        |> notify_player(:public, round.current_player_id, :illegal_move)
+      {:error, game} ->
+        game
+        |> notify_player(:public, game.current_player_id, :illegal_move)
         |> instructions_and_state()
     end
   end
 
-  defp dudo(%Round{current_bid: {0, 0}} = round), do: {:error, round}
+  defp dudo(%Game{current_bid: {0, 0}} = game), do: {:error, game}
 
   defp dudo(
-         %Round{
+         %Game{
            players_hands: players_hands,
            current_bid: {current_count, current_die},
            current_player_id: current_player
-         } = round
+         } = game
        ) do
     current_count_frequency = get_current_die_frequency(players_hands, current_die)
-    previous_player = find_previous_player(round)
+    previous_player = find_previous_player(game)
 
     case current_count_frequency < current_count do
       true ->
         {:ok,
-         %Round{
-           round
+         %Game{
+           game
            | current_player_id: previous_player,
              players_hands:
                Enum.map(players_hands, fn hand ->
@@ -192,8 +192,8 @@ defmodule Perudo.Round do
 
       _ ->
         {:ok,
-         %Round{
-           round
+         %Game{
+           game
            | players_hands:
                Enum.map(players_hands, fn hand ->
                  if hand.player_id == current_player,
@@ -204,22 +204,22 @@ defmodule Perudo.Round do
     end
   end
 
-  defp calza(%Round{current_bid: {0, 0}} = round), do: {:error, round}
+  defp calza(%Game{current_bid: {0, 0}} = game), do: {:error, game}
 
   defp calza(
-         %Round{
+         %Game{
            players_hands: players_hands,
            current_bid: {current_count, current_die},
            current_player_id: current_player
-         } = round
+         } = game
        ) do
     current_count_frequency = get_current_die_frequency(players_hands, current_die)
 
     case current_count_frequency == current_count do
       true ->
         {:ok,
-         %Round{
-           round
+         %Game{
+           game
            | players_hands:
                Enum.map(players_hands, fn player_hand ->
                  if player_hand.player_id == current_player,
@@ -230,8 +230,8 @@ defmodule Perudo.Round do
 
       _ ->
         {:ok,
-         %Round{
-           round
+         %Game{
+           game
            | players_hands:
                Enum.map(players_hands, fn player_hand ->
                  if player_hand.player_id == current_player,
@@ -242,103 +242,103 @@ defmodule Perudo.Round do
     end
   end
 
-  defp outbid(%Round{current_bid: {0, 0}} = round, {_new_count, 1}), do: {:error, round}
+  defp outbid(%Game{current_bid: {0, 0}} = game, {_new_count, 1}), do: {:error, game}
 
   defp outbid(
-         %Round{current_bid: {current_count, current_die}} = round,
+         %Game{current_bid: {current_count, current_die}} = game,
          {current_count, current_die}
        ) do
-    {:error, round}
+    {:error, game}
   end
 
-  defp outbid(round, {_, 0}) do
-    {:error, round}
+  defp outbid(game, {_, 0}) do
+    {:error, game}
   end
 
-  defp outbid(round, {0, _}) do
-    {:error, round}
+  defp outbid(game, {0, _}) do
+    {:error, game}
   end
 
-  defp outbid(%Round{current_bid: {current_count, 1}} = round, {new_count, 1}) do
+  defp outbid(%Game{current_bid: {current_count, 1}} = game, {new_count, 1}) do
     case new_count > current_count do
       true ->
-        {:ok, %Round{round | instructions: [], current_bid: {new_count, 1}}}
+        {:ok, %Game{game | instructions: [], current_bid: {new_count, 1}}}
 
       _ ->
-        {:error, round}
+        {:error, game}
     end
   end
 
-  defp outbid(%Round{current_bid: {current_count, _current_die}} = round, {new_count, 1}) do
+  defp outbid(%Game{current_bid: {current_count, _current_die}} = game, {new_count, 1}) do
     case new_count >= ceil(current_count / 2) do
       true ->
-        {:ok, %Round{round | instructions: [], current_bid: {new_count, 1}}}
+        {:ok, %Game{game | instructions: [], current_bid: {new_count, 1}}}
 
       _ ->
-        {:error, round}
+        {:error, game}
     end
   end
 
-  defp outbid(%Round{current_bid: {current_count, 1}} = round, {new_count, new_die}) do
+  defp outbid(%Game{current_bid: {current_count, 1}} = game, {new_count, new_die}) do
     case new_count >= current_count * 2 + 1 do
       true ->
-        {:ok, %Round{round | instructions: [], current_bid: {new_count, new_die}}}
+        {:ok, %Game{game | instructions: [], current_bid: {new_count, new_die}}}
 
       _ ->
-        {:error, round}
+        {:error, game}
     end
   end
 
-  defp outbid(%Round{current_bid: {current_count, current_die}} = round, {new_count, new_die}) do
+  defp outbid(%Game{current_bid: {current_count, current_die}} = game, {new_count, new_die}) do
     case (new_count >= current_count && new_die > current_die) ||
            (new_count > current_count && new_die >= current_die) do
       true ->
-        {:ok, %Round{round | instructions: [], current_bid: {new_count, new_die}}}
+        {:ok, %Game{game | instructions: [], current_bid: {new_count, new_die}}}
 
       _ ->
-        {:error, round}
+        {:error, game}
     end
   end
 
-  defp reveal_players_hands(round),
-    do: notify_player(round, :public, 1, {:reveal_players_hands, round.players_hands})
+  defp reveal_players_hands(game),
+    do: notify_player(game, :public, 1, {:reveal_players_hands, game.players_hands})
 
-  defp find_next_player(%Round{remaining_players: [winner]} = round) do
-    %Round{round | current_player_id: winner}
+  defp find_next_player(%Game{remaining_players: [winner]} = game) do
+    %Game{game | current_player_id: winner}
   end
 
-  defp find_next_player(round) do
+  defp find_next_player(game) do
     current_player_index =
-      Enum.find_index(round.remaining_players, fn id -> id == round.current_player_id end)
+      Enum.find_index(game.remaining_players, fn id -> id == game.current_player_id end)
 
     next_player =
-      Enum.at(round.remaining_players, current_player_index + 1, hd(round.remaining_players))
+      Enum.at(game.remaining_players, current_player_index + 1, hd(game.remaining_players))
 
-    %Round{round | current_player_id: next_player}
+    %Game{game | current_player_id: next_player}
   end
 
-  defp find_previous_player(round) do
+  defp find_previous_player(game) do
     current_player_index =
-      Enum.find_index(round.remaining_players, fn id -> id == round.current_player_id end)
+      Enum.find_index(game.remaining_players, fn id -> id == game.current_player_id end)
 
-    Enum.at(round.remaining_players, current_player_index - 1, hd(round.remaining_players))
+    Enum.at(game.remaining_players, current_player_index - 1, hd(game.remaining_players))
   end
 
-  defp check_for_loser(%Round{} = round) do
-    loser = Enum.find(round.players_hands, fn hand -> hand.hand.remaining_dice == 0 end)
+  defp check_for_loser(%Game{} = game) do
+    loser = Enum.find(game.players_hands, fn hand -> hand.hand.remaining_dice == 0 end)
 
     case loser != nil do
       true ->
-        %Round{
-          round
+        %Game{
+          game
           | remaining_players:
-              Enum.filter(round.remaining_players, fn player -> player != loser.player_id end)
+              Enum.filter(game.remaining_players, fn player -> player != loser.player_id end)
         }
         |> find_next_player()
         |> notify_player(:public, loser.player_id, :loser)
 
       false ->
-        round
+        game
     end
   end
 
@@ -353,24 +353,24 @@ defmodule Perudo.Round do
     |> Enum.frequencies()
   end
 
-  defp notify_player(round, visibility, player_id, data) do
-    %Round{
-      round
-      | instructions: [{:notify_player, visibility, player_id, data} | round.instructions]
+  defp notify_player(game, visibility, player_id, data) do
+    %Game{
+      game
+      | instructions: [{:notify_player, visibility, player_id, data} | game.instructions]
     }
   end
 
-  defp instructions_and_state(round) do
-    round
+  defp instructions_and_state(game) do
+    game
     |> tell_current_player_to_move()
     |> take_instructions()
   end
 
-  defp tell_current_player_to_move(%Round{current_player_id: nil} = round), do: round
+  defp tell_current_player_to_move(%Game{current_player_id: nil} = game), do: game
 
-  defp tell_current_player_to_move(round),
-    do: notify_player(round, :public, round.current_player_id, :move)
+  defp tell_current_player_to_move(game),
+    do: notify_player(game, :public, game.current_player_id, :move)
 
-  defp take_instructions(round),
-    do: {Enum.reverse(round.instructions), %Round{round | instructions: []}}
+  defp take_instructions(game),
+    do: {Enum.reverse(game.instructions), %Game{game | instructions: []}}
 end

@@ -1,0 +1,28 @@
+defmodule Perudo.GameServer do
+  use GenServer, restart: :transient
+
+  alias Perudo.Game
+
+  @type player :: %{id: any, callback_mod: module, callback_arg: any}
+  @type id :: any
+
+  @impl true
+  def init({id, players_ids}) do
+    {:ok, players_ids |> Game.start(5) |> handle_move_result(%{id: id, game: nil})}
+  end
+
+  @spec start_link({any, [player]}) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link({id, players}) do
+    GenServer.start_link(__MODULE__, {id, Enum.map(players, & &1)}, name: service_name(id))
+  end
+
+  defp handle_move_result({instructions, game}, state), do:
+    Enum.reduce(instructions, %{state | game: game}, &handle_instruction(&2, &1))
+
+  defp handle_instruction(state, {:notify_player, visibility, player_id, instruction_payload}) do
+    #PlayerNotifier.publish(state.round_id, player_id, instruction_payload)
+    state
+  end
+
+  defp service_name(game_id), do: Perudo.service_name({__MODULE__, game_id})
+end

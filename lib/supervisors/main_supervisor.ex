@@ -15,7 +15,7 @@ defmodule Perudo.Supervisors.MainSupervistor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  def new_game(game_id, players) do
+  def create_game(game_id, players) do
     DynamicSupervisor.start_child(__MODULE__, {GameSupervisor, game_id})
     GameSupervisor.start_child(game_id, players)
   end

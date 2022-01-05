@@ -13,13 +13,13 @@ defmodule Perudo.Supervisors.NotifierSupervisor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  def start_child(game) do
-    # Enum.each(game.players, fn player ->
-    #   DynamicSupervisor.start_child(
-    #     service_name(game.id),
-    #     {Servers.PlayerNotifier, [game.id, Updater.player_spec(game.id, player.user_id)]}
-    #   )
-    # end)
+  def start_child(game, players) do
+    Enum.each(players, fn player ->
+      DynamicSupervisor.start_child(
+        service_name(game.id),
+        {Servers.PlayerNotifier, [game.id, player]}
+      )
+    end)
   end
 
   defp service_name(game_id) do

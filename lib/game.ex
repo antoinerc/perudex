@@ -57,7 +57,7 @@ defmodule Perudo.Game do
       instructions: []
     }
     |> initialize_players_hands()
-    |> start_new_game(hd(player_ids))
+    |> start_round(hd(player_ids))
     |> instructions_and_state()
   end
 
@@ -71,12 +71,12 @@ defmodule Perudo.Game do
     }
   end
 
-  defp start_new_game(%Game{remaining_players: [winner]} = game, _) do
+  defp start_round(%Game{remaining_players: [winner]} = game, _) do
     %Game{game | current_player_id: nil, players_hands: [], current_bid: nil}
     |> notify_player(:public, winner, :winner)
   end
 
-  defp start_new_game(game, next_player) do
+  defp start_round(game, next_player) do
     game = %Game{
       game
       | current_player_id: next_player,
@@ -135,7 +135,7 @@ defmodule Perudo.Game do
       {:ok, game, succes_status} ->
         game
         |> check_for_loser()
-        |> start_new_game(game.current_player_id)
+        |> start_round(game.current_player_id)
         |> notify_player(:public, game.current_player_id, succes_status)
         |> instructions_and_state()
 
@@ -153,7 +153,7 @@ defmodule Perudo.Game do
       {:ok, game, success_status} ->
         game
         |> check_for_loser()
-        |> start_new_game(game.current_player_id)
+        |> start_round(game.current_player_id)
         |> notify_player(:public, game.current_player_id, success_status)
         |> instructions_and_state()
 

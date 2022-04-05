@@ -5,13 +5,13 @@ defmodule Perudo.GameServer do
 
   @type id :: any
   @type player :: %{id: any, callback_mod: module, callback_arg: any}
+  @type callback_arg :: any
 
   @impl true
   def init({id, players_ids}) do
     {:ok, players_ids |> Game.start(5) |> handle_move_result(%{id: id, game: nil})}
   end
 
-  @spec start_link({any, [player]}) :: :ignore | {:error, any} | {:ok, pid}
   def start_link({id, players}) do
     GenServer.start_link(__MODULE__, {id, Enum.map(players, & &1.id)}, name: service_name(id))
   end
@@ -20,7 +20,7 @@ defmodule Perudo.GameServer do
     do: Enum.reduce(instructions, %{state | game: game}, &handle_instruction(&2, &1))
 
   defp handle_instruction(state, {:notify_player, visibility, player_id, instruction_payload}) do
-    NotifierServer.publish(state.round_id, visibility, player_id, instruction_payload)
+    NotifierServer.publish(state.id, visibility, player_id, instruction_payload)
     state
   end
 

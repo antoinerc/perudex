@@ -33,7 +33,7 @@ defmodule Perudo.Game do
   @type bid :: {:count, :die}
 
   @type player_instruction ::
-          :move
+          {:move, player_id()}
           | {:reveal_players_hands, [Hand.t()]}
           | {:new_bid, bid()}
           | :unauthorized_move
@@ -44,6 +44,7 @@ defmodule Perudo.Game do
           | :unsuccessful_calza
           | :winner
           | :loser
+          | {:game_started, [player_id()]}
 
   @type visibility :: :private | :public
 
@@ -59,47 +60,6 @@ defmodule Perudo.Game do
     |> initialize_players_hands()
     |> start_round(hd(player_ids))
     |> instructions_and_state()
-  end
-
-  defp initialize_players_hands(game) do
-    %Game{
-      game
-      | players_hands:
-          Enum.map(game.remaining_players, fn p ->
-            %{player_id: p, hand: Hand.new(game.max_dice)}
-          end)
-    }
-  end
-
-  defp start_round(%Game{remaining_players: [winner]} = game, _) do
-    %Game{game | current_player_id: nil, players_hands: [], current_bid: nil}
-    |> notify_player(:public, winner, :winner)
-  end
-
-  defp start_round(game, next_player) do
-    game = %Game{
-      game
-      | current_player_id: next_player,
-        players_hands:
-          Enum.map(game.remaining_players, fn p ->
-            %{
-              player_id: p,
-              hand: Hand.new(Enum.find(game.players_hands, fn x -> x.player_id == p end).hand)
-            }
-          end),
-        current_bid: {0, 0}
-    }
-
-    Enum.reduce(
-      game.remaining_players,
-      game,
-      &notify_player(
-        &2,
-        :private,
-        &1,
-        {:new_hand, Enum.find(game.players_hands, fn x -> x.player_id == &1 end).hand}
-      )
-    )
   end
 
   def move(%Game{current_player_id: player_id} = game, player_id, move) do
@@ -369,7 +329,56 @@ defmodule Perudo.Game do
   defp tell_current_player_to_move(%Game{current_player_id: nil} = game), do: game
 
   defp tell_current_player_to_move(game),
-    do: notify_player(game, :public, game.current_player_id, :move)
+    do: notify_player(game, :public, game.current_player_id, {:move, game.current_player_id})
+
+  defp initialize_players_hands(game) do
+    %Game{
+      game
+      | players_hands:
+          Enum.map(game.remaining_players, fn p ->
+            %{player_id: p, hand: Hand.new(game.max_dice)}
+          end)
+    }
+  end
+
+  defp start_round(%Game{remaining_players: [winner]} = game, _) do
+    %Game{game | current_player_id: nil, players_hands: [], current_bid: nil}
+    |> notify_player(:public, winner, :winner)
+  end
+
+  defp start_round(game, next_player) do
+    game = %Game{
+      game
+      | current_player_id: next_player,
+        players_hands:
+          Enum.map(game.remaining_players, fn p ->
+            %{
+              player_id: p,
+              hand: Hand.new(Enum.find(game.players_hands, fn x -> x.player_id == p end).hand)
+            }
+          end),
+        current_bid: {0, 0}
+    }
+
+    game =
+      notify_player(
+        game,
+        :public,
+        game.current_player_id,
+        {:game_started, game.remaining_players}
+      )
+
+    Enum.reduce(
+      game.remaining_players,
+      game,
+      &notify_player(
+        &2,
+        :private,
+        &1,
+        {:new_hand, Enum.find(game.players_hands, fn x -> x.player_id == &1 end).hand}
+      )
+    )
+  end
 
   defp take_instructions(game),
     do: {Enum.reverse(game.instructions), %Game{game | instructions: []}}

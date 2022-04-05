@@ -17,8 +17,9 @@ defmodule Perudo.Supervisors.GameSupervisor do
   end
 
   def start_child(id, players) do
+    DynamicSupervisor.start_child(service_name(id), {NotifierSupervisor, id})
+    NotifierSupervisor.start_child(id, players)
     DynamicSupervisor.start_child(service_name(id), {GameServer, {id, players}})
-    DynamicSupervisor.start_child(service_name(id), {NotifierSupervisor, {id, players}})
   end
 
   defp service_name(game_id) do

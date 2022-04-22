@@ -5,9 +5,9 @@ defmodule GameTest do
   alias Perudo.Game
   alias Perudo.Hand
 
-  defmacrop notify_player_instruction(visibility, player_id, data) do
+  defmacrop notify_player_instruction(player_id, data) do
     quote do
-      {:notify_player, unquote(visibility), unquote(player_id), unquote(data)}
+      {:notify_player, unquote(player_id), unquote(data)}
     end
   end
 
@@ -16,20 +16,25 @@ defmodule GameTest do
     players = [1, 2]
 
     assert {notifications, r} = Game.start(players, max_dice)
-    assert length(notifications) == length(players) + 2
 
     [notification | rest] = notifications
     notifications = rest
-    assert {:notify_player, :public, 1, {:game_started, ^players}} = notification
+    assert {:notify_player, 1, {:game_started, ^players}} = notification
 
     [notification | rest] = notifications
     notifications = rest
-    assert {:notify_player, :private, 1, {:new_hand, _}} = notification
+    assert {:notify_player, 2, {:game_started, ^players}} = notification
+
     [notification | rest] = notifications
     notifications = rest
-    assert {:notify_player, :private, 2, {:new_hand, _}} = notification
+    assert {:notify_player, 1, {:new_hand, _}} = notification
+    [notification | rest] = notifications
+    notifications = rest
+    assert {:notify_player, 2, {:new_hand, _}} = notification
     [notification | _] = notifications
-    assert {:notify_player, :public, r.current_player_id, {:move, r.current_player_id}} == notification
+
+    assert {:notify_player, r.current_player_id, :move} ==
+             notification
 
     assert %Game{
              instructions: [],
@@ -48,7 +53,7 @@ defmodule GameTest do
     assert {_, new_game} = Game.move(initial_game, 1, {:outbid, {2, 2}})
     assert {instructions, new_game} = Game.move(new_game, 1, {:outbid, {3, 3}})
     assert %Game{current_player_id: 2, current_bid: {2, 2}} = new_game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :unauthorized_move))
+    assert Enum.member?(instructions, notify_player_instruction(1, :unauthorized_move))
   end
 
   test "outbid move to next player" do
@@ -57,15 +62,28 @@ defmodule GameTest do
 
     assert {instructions, new_game} = Game.move(initial_game, 1, {:outbid, {2, 2}})
     assert %Game{current_player_id: 2, current_bid: {2, 2}} = new_game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, new_game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert {instructions, new_game} = Game.move(new_game, 2, {:outbid, {3, 3}})
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, {:move, new_game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(1, :move)
+           )
+
     assert %Game{current_player_id: 1, current_bid: {3, 3}} = new_game
 
     assert {instructions, new_game} = Game.move(new_game, 1, {:outbid, {4, 4}})
     assert %Game{current_player_id: 2, current_bid: {4, 4}} = new_game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, new_game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
   end
 
   test "outbid does not move to next player if bid illegal" do
@@ -76,27 +94,39 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {2, 2}})
     assert %Game{current_player_id: 2, current_bid: {2, 2}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(2, :illegal_bid))
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {4, 4}})
     assert %Game{current_player_id: 1, current_bid: {4, 4}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(1, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {6, 2}})
     assert %Game{current_player_id: 1, current_bid: {4, 4}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(1, :illegal_bid))
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {6, 4}})
     assert %Game{current_player_id: 2, current_bid: {6, 4}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {3, 1}})
     assert %Game{current_player_id: 1, current_bid: {3, 1}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(1, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {2, 1}})
     assert %Game{current_player_id: 1, current_bid: {3, 1}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(1, :illegal_bid))
   end
 
   test "cannot outbid with face 1 die on start of game" do
@@ -104,7 +134,7 @@ defmodule GameTest do
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
     assert {instructions, game} = Game.move(game, 1, {:outbid, {3, 1}})
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(1, :illegal_bid))
   end
 
   test "cannot outbid with same bid" do
@@ -112,10 +142,15 @@ defmodule GameTest do
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
     assert {instructions, game} = Game.move(game, 1, {:outbid, {3, 2}})
     assert %Game{current_player_id: 2, current_bid: {3, 2}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
+
     assert {instructions, game} = Game.move(game, 2, {:outbid, {3, 2}})
     assert %Game{current_player_id: 2, current_bid: {3, 2}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(2, :illegal_bid))
   end
 
   test "cannot outbid with face 1 die when new count lower then half the actual count" do
@@ -124,11 +159,15 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {5, 5}})
     assert %Game{current_player_id: 2, current_bid: {5, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {2, 1}})
     assert %Game{current_player_id: 2, current_bid: {5, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(2, :illegal_bid))
   end
 
   test "outbid with face 1 die" do
@@ -137,15 +176,27 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {3, 2}})
     assert %Game{current_player_id: 2, current_bid: {3, 2}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {2, 1}})
     assert %Game{current_player_id: 1, current_bid: {2, 1}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(1, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {5, 1}})
     assert %Game{current_player_id: 2, current_bid: {5, 1}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
   end
 
   test "outbid" do
@@ -154,23 +205,43 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {5, 5}})
     assert %Game{current_player_id: 2, current_bid: {5, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {3, 1}})
     assert %Game{current_player_id: 1, current_bid: {3, 1}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(1, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {7, 5}})
     assert %Game{current_player_id: 2, current_bid: {7, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {4, 1}})
     assert %Game{current_player_id: 1, current_bid: {4, 1}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(1, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {5, 1}})
     assert %Game{current_player_id: 2, current_bid: {5, 1}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
   end
 
   test "cannot calza at start of game" do
@@ -179,7 +250,7 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, :calza)
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :illegal_move))
+    assert Enum.member?(instructions, notify_player_instruction(1, :illegal_move))
   end
 
   test "calza gives a dice back to the player if he's right" do
@@ -195,18 +266,27 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {9, 5}})
     assert %Game{current_player_id: 2, current_bid: {9, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, :calza)
     assert %Game{current_player_id: 2, current_bid: {0, 0}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :successful_calza))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
+
+    assert Enum.member?(instructions, notify_player_instruction(2, :successful_calza))
     assert length(Enum.at(game.players_hands, 1).hand.dice) == 5
     assert Enum.at(game.players_hands, 1).hand.remaining_dice == 5
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -228,19 +308,28 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {9, 5}})
     assert %Game{current_player_id: 2, current_bid: {9, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, :calza)
     assert %Game{current_player_id: 2, current_bid: {0, 0}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :unsuccessful_calza))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
+
+    assert Enum.member?(instructions, notify_player_instruction(2, :unsuccessful_calza))
 
     assert length(Enum.at(game.players_hands, 1).hand.dice) == 4
     assert Enum.at(game.players_hands, 1).hand.remaining_dice == 4
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -250,15 +339,23 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {9, 5}})
     assert %Game{current_player_id: 2, current_bid: {9, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, :calza)
     assert %Game{current_player_id: 2, current_bid: {0, 0}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -268,7 +365,7 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, :dudo)
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :illegal_move))
+    assert Enum.member?(instructions, notify_player_instruction(1, :illegal_move))
   end
 
   test "dudo removes a dice from the caller player if he's wrong" do
@@ -285,18 +382,27 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {9, 5}})
     assert %Game{current_player_id: 2, current_bid: {9, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(game.current_player_id, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, :dudo)
     assert %Game{current_player_id: 2, current_bid: {0, 0}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, :unsuccessful_dudo))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, :move)
+           )
+
+    assert Enum.member?(instructions, notify_player_instruction(2, :unsuccessful_dudo))
     assert length(Enum.at(game.players_hands, 1).hand.dice) == 4
     assert Enum.at(game.players_hands, 1).hand.remaining_dice == 4
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -314,18 +420,32 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {11, 5}})
     assert %Game{current_player_id: 2, current_bid: {11, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 2, {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(game.current_player_id, :move)
+           )
 
     assert {instructions, game} = Game.move(game, 2, :dudo)
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, {:move, game.current_player_id}))
-    assert Enum.member?(instructions, notify_player_instruction(:public, 1, :successful_dudo))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(1, :move)
+           )
+
+    assert Enum.member?(instructions, notify_player_instruction(1, :successful_dudo))
     assert length(Enum.at(game.players_hands, 0).hand.dice) == 4
     assert Enum.at(game.players_hands, 0).hand.remaining_dice == 4
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(:public, 1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
+           )
+
+    assert Enum.any?(
+             instructions,
+             &match?(notify_player_instruction(2, {:reveal_players_hands, _}), &1)
            )
   end
 
@@ -343,11 +463,15 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 'a', {:outbid, {2, 5}})
     assert %Game{current_player_id: 'b', current_bid: {2, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 'b', {:move, game.current_player_id}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction('b', :move)
+           )
 
     assert {instructions, game} = Game.move(game, 'b', :dudo)
     assert %Game{current_player_id: nil, current_bid: nil, players_hands: []} = game
-    assert Enum.member?(instructions, notify_player_instruction(:public, 'a', :winner))
-    assert Enum.member?(instructions, notify_player_instruction(:public, 'b', :loser))
+    assert Enum.member?(instructions, notify_player_instruction('a', {:winner, 'a'}))
+    assert Enum.member?(instructions, notify_player_instruction('b', {:loser, 'b'}))
   end
 end

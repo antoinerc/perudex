@@ -28,13 +28,12 @@ defmodule Perudo.Game do
 
   @type player_id :: any
   @type move :: {:outbid, bid()} | :calza | :dudo
-  @type instruction ::
-          {:notify_player, visibility, player_id, player_instruction}
+  @type instruction :: {:notify_player, player_id, player_instruction}
   @type bid :: {:count, :die}
 
   @type player_instruction ::
-          {:move, player_id()}
-          | {:reveal_players_hands, [Hand.t()]}
+          :move
+          | {:reveal_players_hands, [{player_id(), Hand.t()}]}
           | {:new_bid, bid()}
           | :unauthorized_move
           | :illegal_bid
@@ -45,8 +44,6 @@ defmodule Perudo.Game do
           | :winner
           | :loser
           | {:game_started, [player_id()]}
-
-  @type visibility :: :private | :public
 
   def start(player_ids, max_dice) do
     %Game{
@@ -69,7 +66,7 @@ defmodule Perudo.Game do
 
   def move(game, player_id, _move) do
     %Game{game | instructions: []}
-    |> notify_player(:public, player_id, :unauthorized_move)
+    |> notify_player(player_id, :unauthorized_move)
     |> instructions_and_state()
   end
 
@@ -77,13 +74,13 @@ defmodule Perudo.Game do
     case outbid(game, bid) do
       {:ok, game} ->
         game
-        |> notify_player(:public, game.current_player_id, {:new_bid, bid})
+        |> notify_players({:new_bid, bid})
         |> find_next_player()
         |> instructions_and_state()
 
       {:error, game} ->
         game
-        |> notify_player(:public, game.current_player_id, :illegal_bid)
+        |> notify_player(game.current_player_id, :illegal_bid)
         |> instructions_and_state()
     end
   end
@@ -96,12 +93,12 @@ defmodule Perudo.Game do
         game
         |> check_for_loser()
         |> start_round(game.current_player_id)
-        |> notify_player(:public, game.current_player_id, succes_status)
+        |> notify_players(succes_status)
         |> instructions_and_state()
 
       {:error, game} ->
         game
-        |> notify_player(:public, game.current_player_id, :illegal_move)
+        |> notify_player(game.current_player_id, :illegal_move)
         |> instructions_and_state()
     end
   end
@@ -114,12 +111,12 @@ defmodule Perudo.Game do
         game
         |> check_for_loser()
         |> start_round(game.current_player_id)
-        |> notify_player(:public, game.current_player_id, success_status)
+        |> notify_players(success_status)
         |> instructions_and_state()
 
       {:error, game} ->
         game
-        |> notify_player(:public, game.current_player_id, :illegal_move)
+        |> notify_player(game.current_player_id, :illegal_move)
         |> instructions_and_state()
     end
   end
@@ -260,8 +257,9 @@ defmodule Perudo.Game do
     end
   end
 
-  defp reveal_players_hands(game),
-    do: notify_player(game, :public, 1, {:reveal_players_hands, game.players_hands})
+  defp reveal_players_hands(game) do
+    notify_players(game, {:reveal_players_hands, game.players_hands})
+  end
 
   defp find_next_player(%Game{remaining_players: [winner]} = game) do
     %Game{game | current_player_id: winner}
@@ -289,13 +287,14 @@ defmodule Perudo.Game do
 
     case loser != nil do
       true ->
+        game = notify_players(game, {:loser, loser.player_id})
+
         %Game{
           game
           | remaining_players:
               Enum.filter(game.remaining_players, fn player -> player != loser.player_id end)
         }
         |> find_next_player()
-        |> notify_player(:public, loser.player_id, :loser)
 
       false ->
         game
@@ -313,11 +312,23 @@ defmodule Perudo.Game do
     |> Enum.frequencies()
   end
 
-  defp notify_player(game, visibility, player_id, data) do
+  defp notify_player(game, player_id, data) do
     %Game{
       game
-      | instructions: [{:notify_player, visibility, player_id, data} | game.instructions]
+      | instructions: [{:notify_player, player_id, data} | game.instructions]
     }
+  end
+
+  defp notify_players(game, data) do
+    Enum.reduce(
+      game.remaining_players,
+      game,
+      &notify_player(
+        &2,
+        &1,
+        data
+      )
+    )
   end
 
   defp instructions_and_state(game) do
@@ -329,7 +340,7 @@ defmodule Perudo.Game do
   defp tell_current_player_to_move(%Game{current_player_id: nil} = game), do: game
 
   defp tell_current_player_to_move(game),
-    do: notify_player(game, :public, game.current_player_id, {:move, game.current_player_id})
+    do: notify_player(game, game.current_player_id, :move)
 
   defp initialize_players_hands(game) do
     %Game{
@@ -342,8 +353,17 @@ defmodule Perudo.Game do
   end
 
   defp start_round(%Game{remaining_players: [winner]} = game, _) do
-    %Game{game | current_player_id: nil, players_hands: [], current_bid: nil}
-    |> notify_player(:public, winner, :winner)
+    game = %Game{game | current_player_id: nil, players_hands: [], current_bid: nil}
+
+    Enum.reduce(
+      game.remaining_players,
+      game,
+      &notify_player(
+        &2,
+        &1,
+        {:winner, winner}
+      )
+    )
   end
 
   defp start_round(game, next_player) do
@@ -361,11 +381,14 @@ defmodule Perudo.Game do
     }
 
     game =
-      notify_player(
+      Enum.reduce(
+        game.remaining_players,
         game,
-        :public,
-        game.current_player_id,
-        {:game_started, game.remaining_players}
+        &notify_player(
+          &2,
+          &1,
+          {:game_started, &2.remaining_players}
+        )
       )
 
     Enum.reduce(
@@ -373,7 +396,6 @@ defmodule Perudo.Game do
       game,
       &notify_player(
         &2,
-        :private,
         &1,
         {:new_hand, Enum.find(game.players_hands, fn x -> x.player_id == &1 end).hand}
       )

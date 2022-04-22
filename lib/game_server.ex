@@ -19,8 +19,8 @@ defmodule Perudo.GameServer do
   defp handle_move_result({instructions, game}, state),
     do: Enum.reduce(instructions, %{state | game: game}, &handle_instruction(&2, &1))
 
-  defp handle_instruction(state, {:notify_player, visibility, player_id, instruction_payload}) do
-    NotifierServer.publish(state.id, visibility, player_id, instruction_payload)
+  defp handle_instruction(state, {:notify_player, player_id, instruction_payload}) do
+    NotifierServer.publish(state.id, player_id, instruction_payload)
     state
   end
 

@@ -94,7 +94,7 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {2, 2}})
     assert %Game{current_player_id: 2, current_bid: {2, 2}} = game
-    assert Enum.member?(instructions, notify_player_instruction(2, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(2, :invalid_bid))
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {4, 4}})
     assert %Game{current_player_id: 1, current_bid: {4, 4}} = game
@@ -106,7 +106,7 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {6, 2}})
     assert %Game{current_player_id: 1, current_bid: {4, 4}} = game
-    assert Enum.member?(instructions, notify_player_instruction(1, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(1, :invalid_bid))
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {6, 4}})
     assert %Game{current_player_id: 2, current_bid: {6, 4}} = game
@@ -126,7 +126,7 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 1, {:outbid, {2, 1}})
     assert %Game{current_player_id: 1, current_bid: {3, 1}} = game
-    assert Enum.member?(instructions, notify_player_instruction(1, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(1, :invalid_bid))
   end
 
   test "cannot outbid with face 1 die on start of game" do
@@ -134,7 +134,7 @@ defmodule GameTest do
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
     assert {instructions, game} = Game.move(game, 1, {:outbid, {3, 1}})
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
-    assert Enum.member?(instructions, notify_player_instruction(1, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(1, :invalid_bid))
   end
 
   test "cannot outbid with same bid" do
@@ -150,7 +150,7 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {3, 2}})
     assert %Game{current_player_id: 2, current_bid: {3, 2}} = game
-    assert Enum.member?(instructions, notify_player_instruction(2, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(2, :invalid_bid))
   end
 
   test "cannot outbid with face 1 die when new count lower then half the actual count" do
@@ -167,7 +167,7 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.move(game, 2, {:outbid, {2, 1}})
     assert %Game{current_player_id: 2, current_bid: {5, 5}} = game
-    assert Enum.member?(instructions, notify_player_instruction(2, :illegal_bid))
+    assert Enum.member?(instructions, notify_player_instruction(2, :invalid_bid))
   end
 
   test "outbid with face 1 die" do

@@ -36,13 +36,15 @@ defmodule Perudo.Game do
           | {:reveal_players_hands, [{player_id(), Hand.t()}]}
           | {:new_bid, bid()}
           | :unauthorized_move
-          | :illegal_bid
+          | :invalid_bid
           | :illegal_move
           | {:new_hand, Hand.t()}
           | :successful_calza
           | :unsuccessful_calza
-          | :winner
-          | :loser
+          | :successful_dudo
+          | :unsuccessful_dudo
+          | {:winner, player_id()}
+          | {:loser, player_id()}
           | {:game_started, [player_id()]}
 
   def start(player_ids, max_dice) do
@@ -80,7 +82,7 @@ defmodule Perudo.Game do
 
       {:error, game} ->
         game
-        |> notify_player(game.current_player_id, :illegal_bid)
+        |> notify_player(game.current_player_id, :invalid_bid)
         |> instructions_and_state()
     end
   end

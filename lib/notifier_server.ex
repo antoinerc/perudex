@@ -1,11 +1,20 @@
 defmodule Perudo.NotifierServer do
   use GenServer, restart: :transient
 
-  @callback start_game(GameServer.callback_arg(), [Game.player_id()]) :: any
+  @callback start_game(GameServer.callback_arg(), Game.player_id(), [Game.player_id()]) :: any
   @callback new_hand(GameServer.callback_arg(), Game.player_id(), Hand.t()) :: any
   @callback move(GameServer.callback_arg(), Game.player_id()) :: any
-  @callback reveal_player_hands(GameServer.callback_arg(), any) :: any
-  @callback outbid(GameServer.callback_arg(), any) :: any
+  @callback reveal_player_hands(GameServer.callback_arg(), Game.player_id(), [{Game.player_id, Perudo.Hand.t()}]) :: any
+  @callback unauthorized_move(GameServer.callback_arg(), Game.player_id()) :: any
+  @callback new_bid(GameServer.callback_arg(), Game.player_id(), Game.bid()) :: any
+  @callback invalid_bid(GameServer.callback_arg(), Game.player_id()) :: any
+  @callback illegal_move(GameServer.callback_arg(), Game.player_id()) :: any
+  @callback successful_calza(GameServer.callback_arg(), Game.player_id()) :: any
+  @callback unsuccessful_calza(GameServer.callback_arg(), Game.player_id()) :: any
+  @callback successful_dudo(GameServer.callback_arg(), Game.player_id()) :: any
+  @callback unsuccessful_dudo(GameServer.callback_arg(), Game.player_id()) :: any
+  @callback winner(GameServer.callback_arg(), Game.player_id(), Game.player_id()) :: any
+  @callback loser(GameServer.callback_arg(), Game.player_id(), Game.player_id()) :: any
 
   def start_link({game_id, player}) do
     GenServer.start_link(__MODULE__, {game_id, player}, name: service_name(game_id, player.id))
@@ -34,6 +43,16 @@ defmodule Perudo.NotifierServer do
   defp decode_instruction({:new_hand, hand}), do: {:new_hand, [hand]}
   defp decode_instruction({:move, player}), do: {:move, [player]}
   defp decode_instruction({:reveal_players_hands, hands}), do: {:reveal_players_hands, [hands]}
+  defp decode_instruction(:unauthorized_move), do: {:unauthorized_move, []}
+  defp decode_instruction({:new_bid, bid}), do: {:new_bid, [bid]}
+  defp decode_instruction(:invalid_bid), do: {:invalid_bid, []}
+  defp decode_instruction(:invalid_move), do: {:invalid_move, []}
+  defp decode_instruction(:successful_calza), do: {:successful_calza, []}
+  defp decode_instruction(:unsuccessful_calza), do: {:unsuccessful_calza, []}
+  defp decode_instruction(:successful_dudo), do: {:successful_dudo, []}
+  defp decode_instruction(:unsuccessful_dudo), do: {:unsuccessful_dudo, []}
+  defp decode_instruction({:winner, winner_id}), do: {:winer, [winner_id]}
+  defp decode_instruction({:loser, loser_id}), do: {:winer, [loser_id]}
 
   def service_name(game_id, player_id) do
     Perudo.service_name({__MODULE__, game_id, player_id})

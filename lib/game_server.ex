@@ -16,6 +16,18 @@ defmodule Perudo.GameServer do
     GenServer.start_link(__MODULE__, {id, Enum.map(players, & &1.id)}, name: service_name(id))
   end
 
+  @spec move(id, Game.player_id(), Game.move()) :: any
+  def move(game_id, player_id, move),
+    do: GenServer.call(service_name(game_id), {:move, player_id, move})
+
+  @impl true
+  def handle_call({:move, player_id, move}, _from, state),
+    do:
+      {:reply, :ok,
+       state.game
+       |> Game.move(player_id, move)
+       |> handle_move_result(state)}
+
   defp handle_move_result({instructions, game}, state),
     do: Enum.reduce(instructions, %{state | game: game}, &handle_instruction(&2, &1))
 

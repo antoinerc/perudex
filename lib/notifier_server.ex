@@ -1,4 +1,8 @@
 defmodule Perudo.NotifierServer do
+  @moduledoc """
+  This module is a GenServer to handle communication going to the players by defining an interface a module need to implements.
+  """
+
   use GenServer, restart: :transient
 
   @callback start_game(GameServer.callback_arg(), Game.player_id(), [Game.player_id()]) :: any
@@ -18,18 +22,16 @@ defmodule Perudo.NotifierServer do
   @callback winner(GameServer.callback_arg(), Game.player_id(), Game.player_id()) :: any
   @callback loser(GameServer.callback_arg(), Game.player_id(), Game.player_id()) :: any
 
-  def start_link({game_id, player}) do
-    GenServer.start_link(__MODULE__, {game_id, player}, name: service_name(game_id, player.id))
-  end
+  def start_link({game_id, player}),
+    do:
+      GenServer.start_link(__MODULE__, {game_id, player}, name: service_name(game_id, player.id))
 
   @impl true
-  def init({game_id, player}) do
-    {:ok, %{game_id: game_id, player: player}}
-  end
+  def init({game_id, player}), do: {:ok, %{game_id: game_id, player: player}}
 
-  def publish(game_id, player_id, instruction) do
-    GenServer.cast(service_name(game_id, player_id), {:notify, instruction})
-  end
+  @spec publish(any, any, Game.player_instruction()) :: :ok
+  def publish(game_id, player_id, instruction),
+    do: GenServer.cast(service_name(game_id, player_id), {:notify, instruction})
 
   @impl true
   def handle_cast({:notify, instruction}, state) do
@@ -56,7 +58,5 @@ defmodule Perudo.NotifierServer do
   defp decode_instruction({:winner, winner_id}), do: {:winner, [winner_id]}
   defp decode_instruction({:loser, loser_id}), do: {:loser, [loser_id]}
 
-  def service_name(game_id, player_id) do
-    Perudo.service_name({__MODULE__, game_id, player_id})
-  end
+  defp service_name(game_id, player_id), do: Perudo.service_name({__MODULE__, game_id, player_id})
 end

@@ -101,8 +101,9 @@ defmodule Perudo.Game do
   @doc """
   Play a Perudo `move` on the current game.
 
+  A move can either be an outbid, a calza (exactly the same amount of dice as the previous bid) or a dudo (bid is too ambitious).
   ## Examples
-      iex> Perudo.Game.move(
+      iex> Perudo.Game.play_move(
       ...> %Perudo.Game{
       ...>    all_players: [1, 2],
       ...>    current_bid: {2, 3},
@@ -148,13 +149,13 @@ defmodule Perudo.Game do
         remaining_players: [1, 2]
       }}
   """
-  @spec move(t(), player_id, move) :: {[instruction], t()}
-  def move(%Game{current_player_id: player_id} = game, player_id, move) do
+  @spec play_move(t, player_id, move) :: {[instruction], t()}
+  def play_move(%Game{current_player_id: player_id} = game, player_id, move) do
     %Game{game | instructions: []}
     |> handle_move(move)
   end
 
-  def move(game, player_id, _move) do
+  def play_move(game, player_id, _move) do
     %Game{game | instructions: []}
     |> notify_player(player_id, :unauthorized_move)
     |> take_instructions()

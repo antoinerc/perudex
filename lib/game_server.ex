@@ -8,13 +8,11 @@ defmodule Perudo.GameServer do
   @type callback_arg :: any
 
   @impl true
-  def init({id, players_ids}) do
-    {:ok, players_ids |> Game.start(5) |> handle_move_result(%{id: id, game: nil})}
-  end
+  def init({id, players_ids}),
+    do: {:ok, players_ids |> Game.start(5) |> handle_move_result(%{id: id, game: nil})}
 
-  def start_link({id, players}) do
-    GenServer.start_link(__MODULE__, {id, Enum.map(players, & &1.id)}, name: service_name(id))
-  end
+  def start_link({id, players}),
+    do: GenServer.start_link(__MODULE__, {id, Enum.map(players, & &1.id)}, name: service_name(id))
 
   @spec move(id, Game.player_id(), Game.move()) :: any
   def move(game_id, player_id, move),
@@ -25,7 +23,7 @@ defmodule Perudo.GameServer do
     do:
       {:reply, :ok,
        state.game
-       |> Game.move(player_id, move)
+       |> Game.play_move(player_id, move)
        |> handle_move_result(state)}
 
   defp handle_move_result({instructions, game}, state),

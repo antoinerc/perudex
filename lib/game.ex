@@ -16,37 +16,73 @@ defmodule Perudo.Game do
     :instructions
   ]
 
-  @type t :: %Game{
-          current_player_id: player_id,
-          all_players: [player_id],
-          current_bid: bid(),
-          remaining_players: [player_id],
-          players_hands: [%{player_id: player_id, hand: Hand.t()}],
-          max_dice: integer(),
-          instructions: [instruction]
-        }
+  @opaque t :: %Game{
+            current_player_id: player_id,
+            all_players: [player_id],
+            current_bid: bid,
+            remaining_players: [player_id],
+            players_hands: [%{player_id: player_id, hand: Hand.t()}],
+            max_dice: integer(),
+            instructions: [instruction]
+          }
 
   @type player_id :: any
-  @type move :: {:outbid, bid()} | :calza | :dudo
+  @type move :: {:outbid, bid} | :calza | :dudo
   @type instruction :: {:notify_player, player_id, player_instruction}
   @type bid :: {:count, :die}
 
   @type player_instruction ::
           :move
-          | {:reveal_players_hands, [{player_id(), Hand.t()}]}
-          | {:new_bid, bid()}
+          | {:reveal_players_hands, [{player_id, Hand.t()}]}
+          | {:new_bid, bid}
           | :unauthorized_move
           | :invalid_bid
           | :illegal_move
           | {:new_hand, Hand.t()}
-          | :successful_calza
-          | :unsuccessful_calza
-          | :successful_dudo
-          | :unsuccessful_dudo
-          | {:winner, player_id()}
-          | {:loser, player_id()}
-          | {:game_started, [player_id()]}
+          | {:successful_calza, player_id}
+          | {:unsuccessful_calza, player_id}
+          | {:successful_dudo, player_id}
+          | {:unsuccessful_dudo, player_id}
+          | {:winner, player_id}
+          | {:loser, player_id}
+          | {:game_started, [player_id]}
 
+  @doc """
+  Initialize a game of Perudo with `players_ids` and specified `max_dice` a player can hold.
+
+  Returns a tuple containing a list of `Perudo.Game.player_instruction() and a `Perudo.Game` struct.
+
+  ## Examples
+      iex>
+      :rand.seed(:exsplus, {101, 102, 103})
+      Perudo.Game.start([1, 2], 5)
+      {[
+        {:notify_player, 1, {:game_started, [1, 2]}},
+        {:notify_player, 2, {:game_started, [1, 2]}},
+        {:notify_player, 1, {:new_hand, %Perudo.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5}}},
+        {:notify_player, 2, {:new_hand, %Perudo.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5}}},
+        {:notify_player, 1, :move}
+      ],
+      %Perudo.Game{
+        all_players: [1, 2],
+        current_bid: {0, 0},
+        current_player_id: 1,
+        instructions: [],
+        max_dice: 5,
+        players_hands: [
+          %{
+            hand: %Perudo.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5},
+            player_id: 1
+          },
+          %{
+            hand: %Perudo.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5},
+            player_id: 2
+          }
+        ],
+        remaining_players: [1, 2]
+      }}
+  """
+  @spec start([player_id], integer) :: {[player_instruction], Perudo.Game.t()}
   def start(player_ids, max_dice) do
     %Game{
       current_player_id: hd(player_ids),
@@ -62,6 +98,57 @@ defmodule Perudo.Game do
     |> instructions_and_state()
   end
 
+  @doc """
+  Play a Perudo `move` on the current game.
+
+  ## Examples
+      iex> Perudo.Game.move(
+      ...> %Perudo.Game{
+      ...>    all_players: [1, 2],
+      ...>    current_bid: {2, 3},
+      ...>    current_player_id: 2,
+      ...>    instructions: [],
+      ...>    max_dice: 5,
+      ...>    players_hands: [
+      ...>      %{
+      ...>        hand: %Perudo.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
+      ...>        player_id: 1
+      ...>      },
+      ...>      %{
+      ...>        hand: %Perudo.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
+      ...>        player_id: 2
+      ...>      }
+      ...>    ],
+      ...>    remaining_players: [1, 2]
+      ...>  },
+      ...>  1,
+      ...>  {:outbid, {2, 3}})
+
+      {[
+        {:notify_player, 1, {:new_bid, {2, 3}}},
+        {:notify_player, 2, {:new_bid, {2, 3}}},
+        {:notify_player, 2, :move}
+      ],
+      %Perudo.Game{
+        all_players: [1, 2],
+        current_bid: {2, 3},
+        current_player_id: 2,
+        instructions: [],
+        max_dice: 5,
+        players_hands: [
+          %{
+            hand: %Perudo.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
+            player_id: 1
+          },
+          %{
+            hand: %Perudo.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
+            player_id: 2
+          }
+        ],
+        remaining_players: [1, 2]
+      }}
+  """
+  @spec move(t(), player_id, move) :: {[instruction], t()}
   def move(%Game{current_player_id: player_id} = game, player_id, move) do
     %Game{game | instructions: []}
     |> handle_move(move)
@@ -259,13 +346,11 @@ defmodule Perudo.Game do
     end
   end
 
-  defp reveal_players_hands(game) do
-    notify_players(game, {:reveal_players_hands, game.players_hands})
-  end
+  defp reveal_players_hands(game),
+    do: notify_players(game, {:reveal_players_hands, game.players_hands})
 
-  defp find_next_player(%Game{remaining_players: [winner]} = game) do
-    %Game{game | current_player_id: winner}
-  end
+  defp find_next_player(%Game{remaining_players: [winner]} = game),
+    do: %Game{game | current_player_id: winner}
 
   defp find_next_player(game) do
     current_player_index =
@@ -344,12 +429,12 @@ defmodule Perudo.Game do
   defp tell_current_player_to_move(game),
     do: notify_player(game, game.current_player_id, :move)
 
-  defp initialize_players_hands(game) do
+  defp initialize_players_hands(%Game{max_dice: max_dice, remaining_players: players} = game) do
     %Game{
       game
       | players_hands:
-          Enum.map(game.remaining_players, fn p ->
-            %{player_id: p, hand: Hand.new(game.max_dice)}
+          Enum.map(players, fn p ->
+            %{player_id: p, hand: Hand.new(%Hand{remaining_dice: max_dice})}
           end)
     }
   end
@@ -384,9 +469,7 @@ defmodule Perudo.Game do
     )
   end
 
-  defp warn_game_start(game) do
-    notify_players(game, {:game_started, game.remaining_players})
-  end
+  defp warn_game_start(game), do: notify_players(game, {:game_started, game.remaining_players})
 
   defp take_instructions(game),
     do: {Enum.reverse(game.instructions), %Game{game | instructions: []}}

@@ -1,4 +1,8 @@
 defmodule Perudo.GameServer do
+  @moduledoc """
+  This module is a GenServer implementation to control the Perudo game state.
+  """
+
   use GenServer, restart: :transient
 
   alias Perudo.{Game, NotifierServer}

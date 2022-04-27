@@ -1,10 +1,10 @@
-defmodule Perudo.Supervisors.MainSupervistor do
+defmodule Perudex.Supervisors.MainSupervistor do
   @moduledoc """
   Main supervisor to orchestrate other supervisors
   """
   use DynamicSupervisor
 
-  alias Perudo.Supervisors.GameSupervisor
+  alias Perudex.Supervisors.GameSupervisor
 
   def start_link(opts) do
     DynamicSupervisor.start_link(__MODULE__, opts, name: __MODULE__)

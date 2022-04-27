@@ -1,6 +1,6 @@
-defmodule Perudo.Hand do
+defmodule Perudex.Hand do
   @moduledoc """
-  Provides functions to manipulate a hand of dice in Perudo.
+  Provides functions to manipulate a hand of dice in Perudex.
   """
   alias __MODULE__
 
@@ -13,7 +13,7 @@ defmodule Perudo.Hand do
   Initialize a new hand for a player given his allowed dice holding count.
 
   ## Examples:
-      iex> hand = Perudo.Hand.new(%Perudo.Hand{remaining_dice: 5})
+      iex> hand = Perudex.Hand.new(%Perudex.Hand{remaining_dice: 5})
       iex> %{remaining_dice: 5} = hand
       iex> length(hand.dice) == hand.remaining_dice
   """
@@ -31,8 +31,8 @@ defmodule Perudo.Hand do
   Add a die to the hand if the maximum defined by game rules is not busted.
 
   ## Examples:
-      iex> Perudo.Hand.add(%Perudo.Hand{remaining_dice: 4})
-      %Perudo.Hand{remaining_dice: 5, dice: nil}
+      iex> Perudex.Hand.add(%Perudex.Hand{remaining_dice: 4})
+      %Perudex.Hand{remaining_dice: 5, dice: nil}
   """
   def add(%Hand{remaining_dice: remaining_dice} = hand) do
     case remaining_dice < 5 do
@@ -48,11 +48,11 @@ defmodule Perudo.Hand do
   Remove a die from the hand if it is not empty.
 
   ## Examples:
-      iex> Perudo.Hand.take(%Perudo.Hand{remaining_dice: 5})
-      %Perudo.Hand{remaining_dice: 4, dice: nil}
+      iex> Perudex.Hand.take(%Perudex.Hand{remaining_dice: 5})
+      %Perudex.Hand{remaining_dice: 4, dice: nil}
 
-      iex> Perudo.Hand.take(%Perudo.Hand{remaining_dice: 0})
-      %Perudo.Hand{remaining_dice: 0, dice: nil}
+      iex> Perudex.Hand.take(%Perudex.Hand{remaining_dice: 0})
+      %Perudex.Hand{remaining_dice: 0, dice: nil}
   """
   def take(%Hand{remaining_dice: 0} = hand) do
     hand

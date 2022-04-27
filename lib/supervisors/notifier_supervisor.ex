@@ -1,4 +1,4 @@
-defmodule Perudo.Supervisors.NotifierSupervisor do
+defmodule Perudex.Supervisors.NotifierSupervisor do
   @moduledoc """
   Supervisor for notifications servers
   """
@@ -17,12 +17,12 @@ defmodule Perudo.Supervisors.NotifierSupervisor do
     Enum.each(players, fn player ->
       DynamicSupervisor.start_child(
         service_name(game_id),
-        {Perudo.NotifierServer, {game_id, player}}
+        {Perudex.NotifierServer, {game_id, player}}
       )
     end)
   end
 
   defp service_name(game_id) do
-    Perudo.service_name({__MODULE__, game_id})
+    Perudex.service_name({__MODULE__, game_id})
   end
 end

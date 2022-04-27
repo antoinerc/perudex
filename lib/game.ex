@@ -1,10 +1,10 @@
-defmodule Perudo.Game do
+defmodule Perudex.Game do
   @moduledoc """
-  Provides functions to manipulate a game of Perudo.
+  Provides functions to manipulate a game of Perudex.
   """
   alias __MODULE__
 
-  alias Perudo.Hand
+  alias Perudex.Hand
 
   defstruct [
     :current_player_id,
@@ -50,20 +50,20 @@ defmodule Perudo.Game do
   @doc """
   Initialize a game of Perudo with `players_ids` and specified `max_dice` a player can hold.
 
-  Returns a tuple containing a list of `Perudo.Game.player_instruction() and a `Perudo.Game` struct.
+  Returns a tuple containing a list of `Perudex.Game.player_instruction() and a `Perudex.Game` struct.
 
   ## Examples
       iex>
       :rand.seed(:exsplus, {101, 102, 103})
-      Perudo.Game.start([1, 2], 5)
+      Perudex.Game.start([1, 2], 5)
       {[
         {:notify_player, 1, {:game_started, [1, 2]}},
         {:notify_player, 2, {:game_started, [1, 2]}},
-        {:notify_player, 1, {:new_hand, %Perudo.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5}}},
-        {:notify_player, 2, {:new_hand, %Perudo.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5}}},
+        {:notify_player, 1, {:new_hand, %Perudex.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5}}},
+        {:notify_player, 2, {:new_hand, %Perudex.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5}}},
         {:notify_player, 1, :move}
       ],
-      %Perudo.Game{
+      %Perudex.Game{
         all_players: [1, 2],
         current_bid: {0, 0},
         current_player_id: 1,
@@ -71,18 +71,18 @@ defmodule Perudo.Game do
         max_dice: 5,
         players_hands: [
           %{
-            hand: %Perudo.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5},
+            hand: %Perudex.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5},
             player_id: 1
           },
           %{
-            hand: %Perudo.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5},
+            hand: %Perudex.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5},
             player_id: 2
           }
         ],
         remaining_players: [1, 2]
       }}
   """
-  @spec start([player_id], integer) :: {[player_instruction], Perudo.Game.t()}
+  @spec start([player_id], integer) :: {[player_instruction], Perudex.Game.t()}
   def start(player_ids, max_dice) do
     %Game{
       current_player_id: hd(player_ids),
@@ -103,8 +103,8 @@ defmodule Perudo.Game do
 
   A move can either be an outbid, a calza (exactly the same amount of dice as the previous bid) or a dudo (bid is too ambitious).
   ## Examples
-      iex> Perudo.Game.play_move(
-      ...> %Perudo.Game{
+      iex> Perudex.Game.play_move(
+      ...> %Perudex.Game{
       ...>    all_players: [1, 2],
       ...>    current_bid: {2, 3},
       ...>    current_player_id: 2,
@@ -112,11 +112,11 @@ defmodule Perudo.Game do
       ...>    max_dice: 5,
       ...>    players_hands: [
       ...>      %{
-      ...>        hand: %Perudo.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
+      ...>        hand: %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
       ...>        player_id: 1
       ...>      },
       ...>      %{
-      ...>        hand: %Perudo.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
+      ...>        hand: %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
       ...>        player_id: 2
       ...>      }
       ...>    ],
@@ -130,7 +130,7 @@ defmodule Perudo.Game do
         {:notify_player, 2, {:new_bid, {2, 3}}},
         {:notify_player, 2, :move}
       ],
-      %Perudo.Game{
+      %Perudex.Game{
         all_players: [1, 2],
         current_bid: {2, 3},
         current_player_id: 2,
@@ -138,11 +138,11 @@ defmodule Perudo.Game do
         max_dice: 5,
         players_hands: [
           %{
-            hand: %Perudo.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
+            hand: %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
             player_id: 1
           },
           %{
-            hand: %Perudo.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
+            hand: %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
             player_id: 2
           }
         ],

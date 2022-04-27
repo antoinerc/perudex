@@ -1,11 +1,11 @@
-defmodule Perudo.Supervisors.GameSupervisor do
+defmodule Perudex.Supervisors.GameSupervisor do
   @moduledoc """
   Supervisor for game servers
   """
   use DynamicSupervisor
 
-  alias Perudo.GameServer
-  alias Perudo.Supervisors.NotifierSupervisor
+  alias Perudex.GameServer
+  alias Perudex.Supervisors.NotifierSupervisor
 
   def start_link(opts) do
     DynamicSupervisor.start_link(__MODULE__, opts, name: service_name(opts))
@@ -23,6 +23,6 @@ defmodule Perudo.Supervisors.GameSupervisor do
   end
 
   defp service_name(game_id) do
-    Perudo.service_name({__MODULE__, game_id})
+    Perudex.service_name({__MODULE__, game_id})
   end
 end

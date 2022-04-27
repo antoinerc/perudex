@@ -1,11 +1,11 @@
-defmodule Perudo.GameServer do
+defmodule Perudex.GameServer do
   @moduledoc """
   This module is a GenServer implementation to control the Perudo game state.
   """
 
   use GenServer, restart: :transient
 
-  alias Perudo.{Game, NotifierServer}
+  alias Perudex.{Game, NotifierServer}
 
   @type id :: any
   @type player :: %{id: any, callback_mod: module, callback_arg: any}
@@ -38,5 +38,5 @@ defmodule Perudo.GameServer do
     state
   end
 
-  defp service_name(game_id), do: Perudo.service_name({__MODULE__, game_id})
+  defp service_name(game_id), do: Perudex.service_name({__MODULE__, game_id})
 end

@@ -1,10 +1,10 @@
-defmodule Perudo.IntegrationTest do
+defmodule Perudex.IntegrationTest do
   use ExUnit.Case, async: true
-  @behaviour Perudo.NotifierServer
+  @behaviour Perudex.NotifierServer
 
   test "game with two players" do
     {:ok, _} =
-      Perudo.Supervisors.MainSupervistor.create_game(:game_1, [
+      Perudex.Supervisors.MainSupervistor.create_game(:game_1, [
         %{id: :player_1, callback_mod: __MODULE__, callback_arg: self()},
         %{id: :player_2, callback_mod: __MODULE__, callback_arg: self()}
       ])
@@ -17,44 +17,44 @@ defmodule Perudo.IntegrationTest do
     assert_receive {:player_2, {:new_hand, %{dice: _, remaining_dice: 5}}}
 
     # Moves
-    Perudo.GameServer.move(:game_1, :player_2, :dudo)
+    Perudex.GameServer.move(:game_1, :player_2, :dudo)
     assert_receive {:player_2, :unauthorized_move}
 
-    Perudo.GameServer.move(:game_1, :player_1, :dudo)
+    Perudex.GameServer.move(:game_1, :player_1, :dudo)
     assert_receive {:player_1, :illegal_move}
 
-    Perudo.GameServer.move(:game_1, :player_1, {:outbid, {0, 1}})
+    Perudex.GameServer.move(:game_1, :player_1, {:outbid, {0, 1}})
     assert_receive {:player_1, :invalid_bid}
 
-    Perudo.GameServer.move(:game_1, :player_1, {:outbid, {2, 2}})
+    Perudex.GameServer.move(:game_1, :player_1, {:outbid, {2, 2}})
     assert_receive {:player_1, {:new_bid, {2, 2}}}
     assert_receive {:player_2, {:new_bid, {2, 2}}}
     assert_receive {:player_2, :move}
 
-    Perudo.GameServer.move(:game_1, :player_2, {:outbid, {4, 2}})
+    Perudex.GameServer.move(:game_1, :player_2, {:outbid, {4, 2}})
     assert_receive {:player_1, {:new_bid, {4, 2}}}
     assert_receive {:player_2, {:new_bid, {4, 2}}}
     assert_receive {:player_1, :move}
 
-    Perudo.GameServer.move(:game_1, :player_1, {:outbid, {6, 1}})
+    Perudex.GameServer.move(:game_1, :player_1, {:outbid, {6, 1}})
     assert_receive {:player_1, {:new_bid, {6, 1}}}
     assert_receive {:player_2, {:new_bid, {6, 1}}}
     assert_receive {:player_2, :move}
 
-    Perudo.GameServer.move(:game_1, :player_2, :dudo)
+    Perudex.GameServer.move(:game_1, :player_2, :dudo)
 
     assert_receive {:player_1,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 4}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 4}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 4}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 4}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_1, {:new_hand, %{dice: _, remaining_dice: 4}}}
@@ -63,25 +63,25 @@ defmodule Perudo.IntegrationTest do
     assert_receive {:player_2, :successful_dudo}
     assert_receive {:player_1, :move}
 
-    Perudo.GameServer.move(:game_1, :player_1, {:outbid, {10, 3}})
+    Perudex.GameServer.move(:game_1, :player_1, {:outbid, {10, 3}})
     assert_receive {:player_1, {:new_bid, {10, 3}}}
     assert_receive {:player_2, {:new_bid, {10, 3}}}
     assert_receive {:player_2, :move}
 
-    Perudo.GameServer.move(:game_1, :player_2, :dudo)
+    Perudex.GameServer.move(:game_1, :player_2, :dudo)
 
     assert_receive {:player_1,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 3}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 3}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 3}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 3}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_1, {:new_hand, %{dice: _, remaining_dice: 3}}}
@@ -90,25 +90,25 @@ defmodule Perudo.IntegrationTest do
     assert_receive {:player_2, :successful_dudo}
     assert_receive {:player_1, :move}
 
-    Perudo.GameServer.move(:game_1, :player_1, {:outbid, {10, 3}})
+    Perudex.GameServer.move(:game_1, :player_1, {:outbid, {10, 3}})
     assert_receive {:player_1, {:new_bid, {10, 3}}}
     assert_receive {:player_2, {:new_bid, {10, 3}}}
     assert_receive {:player_2, :move}
 
-    Perudo.GameServer.move(:game_1, :player_2, :dudo)
+    Perudex.GameServer.move(:game_1, :player_2, :dudo)
 
     assert_receive {:player_1,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 2}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 2}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 2}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 2}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_1, {:new_hand, %{dice: _, remaining_dice: 2}}}
@@ -117,25 +117,25 @@ defmodule Perudo.IntegrationTest do
     assert_receive {:player_2, :successful_dudo}
     assert_receive {:player_1, :move}
 
-    Perudo.GameServer.move(:game_1, :player_1, {:outbid, {10, 3}})
+    Perudex.GameServer.move(:game_1, :player_1, {:outbid, {10, 3}})
     assert_receive {:player_1, {:new_bid, {10, 3}}}
     assert_receive {:player_2, {:new_bid, {10, 3}}}
     assert_receive {:player_2, :move}
 
-    Perudo.GameServer.move(:game_1, :player_2, :dudo)
+    Perudex.GameServer.move(:game_1, :player_2, :dudo)
 
     assert_receive {:player_1,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 1}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 1}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 1}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 1}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_1, {:new_hand, %{dice: _, remaining_dice: 1}}}
@@ -144,25 +144,25 @@ defmodule Perudo.IntegrationTest do
     assert_receive {:player_2, :successful_dudo}
     assert_receive {:player_1, :move}
 
-    Perudo.GameServer.move(:game_1, :player_1, {:outbid, {10, 3}})
+    Perudex.GameServer.move(:game_1, :player_1, {:outbid, {10, 3}})
     assert_receive {:player_1, {:new_bid, {10, 3}}}
     assert_receive {:player_2, {:new_bid, {10, 3}}}
     assert_receive {:player_2, :move}
 
-    Perudo.GameServer.move(:game_1, :player_2, :dudo)
+    Perudex.GameServer.move(:game_1, :player_2, :dudo)
 
     assert_receive {:player_1,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 0}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 0}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 0}, player_id: :player_1},
-                       %{hand: %Perudo.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 0}, player_id: :player_1},
+                       %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
                      ]}}
 
     assert_receive {:player_1, {:loser, :player_1}}

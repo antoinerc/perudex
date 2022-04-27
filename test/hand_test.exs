@@ -1,8 +1,8 @@
 defmodule HandTest do
   use ExUnit.Case
-  doctest Perudo.Hand
+  doctest Perudex.Hand
 
-  alias Perudo.Hand
+  alias Perudex.Hand
 
   test "return a dice hand" do
     dice_hand = Hand.new(%Hand{remaining_dice: 50})
@@ -32,8 +32,8 @@ defmodule HandTest do
   end
 
   test "does not remove a die from the hand if hand is empty" do
-    dice_hand = Perudo.Hand.new(%Hand{remaining_dice: 0})
-    dice_hand = Perudo.Hand.take(dice_hand)
+    dice_hand = Perudex.Hand.new(%Hand{remaining_dice: 0})
+    dice_hand = Perudex.Hand.take(dice_hand)
     assert dice_hand.remaining_dice == 0
   end
 end

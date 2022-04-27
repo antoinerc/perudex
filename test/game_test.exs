@@ -1,9 +1,9 @@
 defmodule GameTest do
   use ExUnit.Case
-  doctest Perudo.Game
+  doctest Perudex.Game
 
-  alias Perudo.Game
-  alias Perudo.Hand
+  alias Perudex.Game
+  alias Perudex.Hand
 
   defmacrop notify_player_instruction(player_id, data) do
     quote do

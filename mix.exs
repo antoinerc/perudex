@@ -4,14 +4,17 @@ defmodule Perudex.MixProject do
   def project do
     [
       app: :perudex,
+      name: "Perudex",
+      description: description(),
       version: "0.1.0",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: package(),
+      source_url: "https://github.com/antoinerc/perudex"
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger],
@@ -19,12 +22,21 @@ defmodule Perudex.MixProject do
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.27", only: :dev, runtime: false}
     ]
   end
+
+  defp package do
+    [
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/antoinerc/perudex"}
+    ]
+  end
+
+  defp description,
+    do:
+      "Perudex is a library implementing the game Perudo, also known as Dudo or Liar's Dice (which you may have heard of in the Pirates of the Caribbean movie)."
 end

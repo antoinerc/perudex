@@ -1,4 +1,4 @@
-defmodule Perudex.Supervisors.MainSupervistor do
+defmodule Perudex.Supervisors.MainSupervisor do
   @moduledoc """
   Main supervisor to orchestrate other supervisors
   """

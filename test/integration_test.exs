@@ -4,7 +4,7 @@ defmodule Perudex.IntegrationTest do
 
   test "game with two players" do
     {:ok, _} =
-      Perudex.Supervisors.MainSupervistor.create_game(:game_1, [
+      Perudex.Supervisors.MainSupervisor.create_game(:game_1, [
         %{id: :player_1, callback_mod: __MODULE__, callback_arg: self()},
         %{id: :player_2, callback_mod: __MODULE__, callback_arg: self()}
       ])

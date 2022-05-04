@@ -50,7 +50,7 @@ defmodule Perudex.Game do
   @doc """
   Initialize a game of Perudo with `players_ids` and specified `max_dice` a player can hold.
 
-  Returns a tuple containing a list of `Perudex.Game.player_instruction() and a `Perudex.Game` struct.
+  Returns a tuple containing a list of `Perudex.Game.player_instruction()` and a `Perudex.Game` struct.
 
   ## Examples
       iex>

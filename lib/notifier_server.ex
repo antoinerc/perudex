@@ -7,18 +7,19 @@ defmodule Perudex.NotifierServer do
 
   @callback start_game(GameServer.callback_arg(), Game.player_id(), [Game.player_id()]) :: any
   @callback new_hand(GameServer.callback_arg(), Game.player_id(), Hand.t()) :: any
+  @callback last_move(
+              GameServer.callback_arg(),
+              Game.player_id(),
+              Game.player_id(),
+              Game.last_move()
+            ) :: any
   @callback move(GameServer.callback_arg(), Game.player_id()) :: any
   @callback reveal_players_hands(GameServer.callback_arg(), Game.player_id(), [
               {Game.player_id(), Perudex.Hand.t()}
             ]) :: any
   @callback unauthorized_move(GameServer.callback_arg(), Game.player_id()) :: any
-  @callback new_bid(GameServer.callback_arg(), Game.player_id(), Game.bid()) :: any
   @callback invalid_bid(GameServer.callback_arg(), Game.player_id()) :: any
   @callback illegal_move(GameServer.callback_arg(), Game.player_id()) :: any
-  @callback successful_calza(GameServer.callback_arg(), Game.player_id()) :: any
-  @callback unsuccessful_calza(GameServer.callback_arg(), Game.player_id()) :: any
-  @callback successful_dudo(GameServer.callback_arg(), Game.player_id()) :: any
-  @callback unsuccessful_dudo(GameServer.callback_arg(), Game.player_id()) :: any
   @callback winner(GameServer.callback_arg(), Game.player_id(), Game.player_id()) :: any
   @callback loser(GameServer.callback_arg(), Game.player_id(), Game.player_id()) :: any
 
@@ -48,13 +49,12 @@ defmodule Perudex.NotifierServer do
   defp decode_instruction(:move), do: {:move, []}
   defp decode_instruction({:reveal_players_hands, hands}), do: {:reveal_players_hands, [hands]}
   defp decode_instruction(:unauthorized_move), do: {:unauthorized_move, []}
-  defp decode_instruction({:new_bid, bid}), do: {:new_bid, [bid]}
+
+  defp decode_instruction({:last_move, player_id, move_result}),
+    do: {:last_move, [player_id, move_result]}
+
   defp decode_instruction(:invalid_bid), do: {:invalid_bid, []}
   defp decode_instruction(:illegal_move), do: {:illegal_move, []}
-  defp decode_instruction(:successful_calza), do: {:successful_calza, []}
-  defp decode_instruction(:unsuccessful_calza), do: {:unsuccessful_calza, []}
-  defp decode_instruction(:successful_dudo), do: {:successful_dudo, []}
-  defp decode_instruction(:unsuccessful_dudo), do: {:unsuccessful_dudo, []}
   defp decode_instruction({:winner, winner_id}), do: {:winner, [winner_id]}
   defp decode_instruction({:loser, loser_id}), do: {:loser, [loser_id]}
 

@@ -280,7 +280,11 @@ defmodule GameTest do
              notify_player_instruction(2, :move)
            )
 
-    assert Enum.member?(instructions, notify_player_instruction(2, :successful_calza))
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, {:last_move, 2, {:calza, true}})
+           )
+
     assert length(Enum.at(game.players_hands, 1).hand.dice) == 5
     assert Enum.at(game.players_hands, 1).hand.remaining_dice == 5
 
@@ -322,7 +326,10 @@ defmodule GameTest do
              notify_player_instruction(2, :move)
            )
 
-    assert Enum.member?(instructions, notify_player_instruction(2, :unsuccessful_calza))
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, {:last_move, 2, {:calza, false}})
+           )
 
     assert length(Enum.at(game.players_hands, 1).hand.dice) == 4
     assert Enum.at(game.players_hands, 1).hand.remaining_dice == 4
@@ -396,7 +403,11 @@ defmodule GameTest do
              notify_player_instruction(2, :move)
            )
 
-    assert Enum.member?(instructions, notify_player_instruction(2, :unsuccessful_dudo))
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(2, {:last_move, 2, {:dudo, false}})
+           )
+
     assert length(Enum.at(game.players_hands, 1).hand.dice) == 4
     assert Enum.at(game.players_hands, 1).hand.remaining_dice == 4
 
@@ -434,7 +445,11 @@ defmodule GameTest do
              notify_player_instruction(1, :move)
            )
 
-    assert Enum.member?(instructions, notify_player_instruction(1, :successful_dudo))
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(1, {:last_move, 2, {:dudo, true}})
+           )
+
     assert length(Enum.at(game.players_hands, 0).hand.dice) == 4
     assert Enum.at(game.players_hands, 0).hand.remaining_dice == 4
 

@@ -30,19 +30,16 @@ defmodule Perudex.Game do
   @type move :: {:outbid, bid} | :calza | :dudo
   @type instruction :: {:notify_player, player_id, player_instruction}
   @type bid :: {:count, :die}
+  @type move_result :: {:outbid, bid} | {:calza, boolean} | {:dudo, boolean}
 
   @type player_instruction ::
           :move
           | {:reveal_players_hands, [{player_id, Hand.t()}]}
-          | {:new_bid, bid}
+          | {:last_move, player_id, move_result}
           | :unauthorized_move
           | :invalid_bid
           | :illegal_move
           | {:new_hand, Hand.t()}
-          | {:successful_calza, player_id}
-          | {:unsuccessful_calza, player_id}
-          | {:successful_dudo, player_id}
-          | {:unsuccessful_dudo, player_id}
           | {:winner, player_id}
           | {:loser, player_id}
           | {:game_started, [player_id]}
@@ -126,8 +123,8 @@ defmodule Perudex.Game do
       ...>  {:outbid, {2, 3}})
 
       {[
-        {:notify_player, 1, {:new_bid, {2, 3}}},
-        {:notify_player, 2, {:new_bid, {2, 3}}},
+        {:notify_player, 1, {:last_move, 1, {:outbid, {2, 3}}}},
+        {:notify_player, 2, {:last_move, 1, {:outbid, {2, 3}}}},
         {:notify_player, 2, :move}
       ],
       %Perudex.Game{
@@ -161,11 +158,11 @@ defmodule Perudex.Game do
     |> take_instructions()
   end
 
-  defp handle_move(game, {:outbid, bid}) do
+  defp handle_move(game, {:outbid, bid} = move) do
     case outbid(game, bid) do
       {:ok, game} ->
         game
-        |> notify_players({:new_bid, bid})
+        |> notify_players({:last_move, game.current_player_id, move})
         |> find_next_player()
         |> instructions_and_state()
 
@@ -178,13 +175,14 @@ defmodule Perudex.Game do
 
   defp handle_move(game, :calza) do
     game = reveal_players_hands(game)
+    move_initiator = game.current_player_id
 
     case calza(game) do
-      {:ok, game, succes_status} ->
+      {:ok, game, success_status} ->
         game
         |> check_for_loser()
         |> start_round(game.current_player_id)
-        |> notify_players(succes_status)
+        |> notify_players({:last_move, move_initiator, {:calza, success_status}})
         |> instructions_and_state()
 
       {:error, game} ->
@@ -195,13 +193,15 @@ defmodule Perudex.Game do
   end
 
   defp handle_move(game, :dudo) do
+    move_initiator = game.current_player_id
+
     case dudo(game) do
       {:ok, game, success_status} ->
         game
         |> reveal_players_hands()
         |> check_for_loser()
         |> start_round(game.current_player_id)
-        |> notify_players(success_status)
+        |> notify_players({:last_move, move_initiator, {:dudo, success_status}})
         |> instructions_and_state()
 
       {:error, game} ->
@@ -235,7 +235,7 @@ defmodule Perudex.Game do
                    do: %{hand | hand: Hand.take(hand.hand)},
                    else: hand
                end)
-         }, :successful_dudo}
+         }, current_count_frequency < current_count}
 
       _ ->
         {:ok,
@@ -247,7 +247,7 @@ defmodule Perudex.Game do
                    do: %{hand | hand: Hand.take(hand.hand)},
                    else: hand
                end)
-         }, :unsuccessful_dudo}
+         }, current_count_frequency < current_count}
     end
   end
 
@@ -273,7 +273,7 @@ defmodule Perudex.Game do
                    do: %{player_hand | hand: Hand.add(player_hand.hand)},
                    else: player_hand
                end)
-         }, :successful_calza}
+         }, current_count_frequency == current_count}
 
       _ ->
         {:ok,
@@ -285,7 +285,7 @@ defmodule Perudex.Game do
                    do: %{player_hand | hand: Hand.take(player_hand.hand)},
                    else: player_hand
                end)
-         }, :unsuccessful_calza}
+         }, current_count_frequency == current_count}
     end
   end
 

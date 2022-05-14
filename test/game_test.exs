@@ -104,6 +104,10 @@ defmodule GameTest do
     assert %Game{current_player_id: 2, current_bid: {2, 2}} = game
     assert Enum.member?(instructions, notify_player_instruction(2, :invalid_bid))
 
+    assert {instructions, game} = Game.play_move(game, 2, {:outbid, {"a", "b"}})
+    assert %Game{current_player_id: 2, current_bid: {2, 2}} = game
+    assert Enum.member?(instructions, notify_player_instruction(2, :invalid_bid))
+
     assert {instructions, game} = Game.play_move(game, 2, {:outbid, {4, 4}})
     assert %Game{current_player_id: 1, current_bid: {4, 4}} = game
 

@@ -90,7 +90,7 @@ defmodule Perudex.Game do
       instructions: []
     }
     |> initialize_players_hands()
-    |> warn_game_start()
+    |> notify_players({:game_started, player_ids})
     |> start_round(hd(player_ids))
     |> instructions_and_state()
   end
@@ -178,12 +178,7 @@ defmodule Perudex.Game do
 
     case calza(game) do
       {:ok, game, success_status} ->
-        game
-        |> notify_players({:last_move, move_initiator, {:calza, success_status}})
-        |> reveal_players_hands()
-        |> check_for_loser()
-        |> start_round(game.current_player_id)
-        |> instructions_and_state()
+        end_round(game, {:last_move, move_initiator, {:calza, success_status}})
 
       {:error, game} ->
         game
@@ -197,12 +192,7 @@ defmodule Perudex.Game do
 
     case dudo(game) do
       {:ok, game, success_status} ->
-        game
-        |> notify_players({:last_move, move_initiator, {:dudo, success_status}})
-        |> reveal_players_hands()
-        |> check_for_loser()
-        |> start_round(game.current_player_id)
-        |> instructions_and_state()
+        end_round(game, {:last_move, move_initiator, {:dudo, success_status}})
 
       {:error, game} ->
         game
@@ -289,50 +279,47 @@ defmodule Perudex.Game do
     end
   end
 
+  defp outbid(game, {count, dice}) when not is_integer(dice) or not is_integer(count),
+    do: {:error, game}
+
   defp outbid(%Game{current_bid: {0, 0}} = game, {_new_count, 1}), do: {:error, game}
   defp outbid(%Game{current_bid: {count, dice}} = game, {count, dice}), do: {:error, game}
   defp outbid(game, {_, dice}) when dice > 6, do: {:error, game}
   defp outbid(game, {count, dice}) when dice < 1 or count < 1, do: {:error, game}
 
-  defp outbid(%Game{current_bid: {current_count, 1}} = game, {new_count, 1}) do
-    case new_count > current_count do
-      true ->
-        {:ok, %Game{game | instructions: [], current_bid: {new_count, 1}}}
+  defp outbid(%Game{current_bid: {current_count, 1}} = game, {new_count, 1})
+       when new_count <= current_count,
+       do: {:error, game}
 
-      _ ->
-        {:error, game}
-    end
-  end
+  defp outbid(%Game{current_bid: {current_count, _}} = game, {new_count, 1})
+       when new_count < ceil(current_count / 2),
+       do: {:error, game}
 
-  defp outbid(%Game{current_bid: {current_count, _current_die}} = game, {new_count, 1}) do
-    case new_count >= ceil(current_count / 2) do
-      true ->
-        {:ok, %Game{game | instructions: [], current_bid: {new_count, 1}}}
+  defp outbid(%Game{current_bid: {_current_count, _}} = game, {new_count, 1}),
+    do: {:ok, %Game{game | instructions: [], current_bid: {new_count, 1}}}
 
-      _ ->
-        {:error, game}
-    end
-  end
+  defp outbid(%Game{current_bid: {current_count, 1}} = game, {new_count, _})
+       when new_count < current_count * 2 + 1,
+       do: {:error, game}
 
-  defp outbid(%Game{current_bid: {current_count, 1}} = game, {new_count, new_die}) do
-    case new_count >= current_count * 2 + 1 do
-      true ->
-        {:ok, %Game{game | instructions: [], current_bid: {new_count, new_die}}}
+  defp outbid(%Game{current_bid: {_current_count, 1}} = game, {new_count, new_dice}),
+    do: {:ok, %Game{game | instructions: [], current_bid: {new_count, new_dice}}}
 
-      _ ->
-        {:error, game}
-    end
-  end
+  defp outbid(%Game{current_bid: {current_count, current_dice}} = game, {new_count, new_dice})
+       when (new_count < current_count or new_dice <= current_dice) and
+              (new_count <= current_count or new_dice < current_dice),
+       do: {:error, game}
 
-  defp outbid(%Game{current_bid: {current_count, current_die}} = game, {new_count, new_die}) do
-    case (new_count >= current_count && new_die > current_die) ||
-           (new_count > current_count && new_die >= current_die) do
-      true ->
-        {:ok, %Game{game | instructions: [], current_bid: {new_count, new_die}}}
+  defp outbid(%Game{} = game, {new_count, new_dice}),
+    do: {:ok, %Game{game | instructions: [], current_bid: {new_count, new_dice}}}
 
-      _ ->
-        {:error, game}
-    end
+  defp end_round(game, move_result) do
+    game
+    |> notify_players(move_result)
+    |> reveal_players_hands()
+    |> check_for_loser()
+    |> start_round(game.current_player_id)
+    |> instructions_and_state()
   end
 
   defp reveal_players_hands(game),
@@ -457,8 +444,6 @@ defmodule Perudex.Game do
       )
     )
   end
-
-  defp warn_game_start(game), do: notify_players(game, {:game_started, game.remaining_players})
 
   defp take_instructions(game),
     do: {Enum.reverse(game.instructions), %Game{game | instructions: []}}

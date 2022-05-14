@@ -218,7 +218,7 @@ defmodule Perudex.Game do
         {:ok,
          %Game{
            game
-           | current_player_id: previous_player,
+           | current_player_id: find_previous_player(game),
              players_hands:
                Enum.map(players_hands, fn hand ->
                  if hand.player_id == previous_player,
@@ -342,25 +342,24 @@ defmodule Perudex.Game do
     current_player_index =
       Enum.find_index(game.remaining_players, fn id -> id == game.current_player_id end)
 
-    Enum.at(game.remaining_players, current_player_index - 1, hd(game.remaining_players))
+    Enum.at(game.remaining_players, current_player_index - 1, List.last(game.remaining_players))
   end
 
   defp check_for_loser(%Game{} = game) do
     loser = Enum.find(game.players_hands, fn hand -> hand.hand.remaining_dice == 0 end)
 
-    case loser != nil do
-      true ->
-        game = notify_players(game, {:loser, loser.player_id})
+    case loser do
+      nil ->
+        game
 
+      _ ->
         %Game{
           game
           | remaining_players:
               Enum.filter(game.remaining_players, fn player -> player != loser.player_id end)
         }
+        |> notify_players({:loser, loser.player_id})
         |> find_next_player()
-
-      false ->
-        game
     end
   end
 

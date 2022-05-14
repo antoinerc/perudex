@@ -179,10 +179,10 @@ defmodule Perudex.Game do
     case calza(game) do
       {:ok, game, success_status} ->
         game
+        |> notify_players({:last_move, move_initiator, {:calza, success_status}})
         |> reveal_players_hands()
         |> check_for_loser()
         |> start_round(game.current_player_id)
-        |> notify_players({:last_move, move_initiator, {:calza, success_status}})
         |> instructions_and_state()
 
       {:error, game} ->
@@ -198,10 +198,10 @@ defmodule Perudex.Game do
     case dudo(game) do
       {:ok, game, success_status} ->
         game
+        |> notify_players({:last_move, move_initiator, {:dudo, success_status}})
         |> reveal_players_hands()
         |> check_for_loser()
         |> start_round(game.current_player_id)
-        |> notify_players({:last_move, move_initiator, {:dudo, success_status}})
         |> instructions_and_state()
 
       {:error, game} ->
@@ -290,21 +290,9 @@ defmodule Perudex.Game do
   end
 
   defp outbid(%Game{current_bid: {0, 0}} = game, {_new_count, 1}), do: {:error, game}
-
-  defp outbid(
-         %Game{current_bid: {current_count, current_die}} = game,
-         {current_count, current_die}
-       ) do
-    {:error, game}
-  end
-
-  defp outbid(game, {_, 0}) do
-    {:error, game}
-  end
-
-  defp outbid(game, {0, _}) do
-    {:error, game}
-  end
+  defp outbid(%Game{current_bid: {count, dice}} = game, {count, dice}), do: {:error, game}
+  defp outbid(game, {_, dice}) when dice > 6, do: {:error, game}
+  defp outbid(game, {count, dice}) when dice < 1 or count < 1, do: {:error, game}
 
   defp outbid(%Game{current_bid: {current_count, 1}} = game, {new_count, 1}) do
     case new_count > current_count do

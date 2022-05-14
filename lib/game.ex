@@ -174,12 +174,12 @@ defmodule Perudex.Game do
   end
 
   defp handle_move(game, :calza) do
-    game = reveal_players_hands(game)
     move_initiator = game.current_player_id
 
     case calza(game) do
       {:ok, game, success_status} ->
         game
+        |> reveal_players_hands()
         |> check_for_loser()
         |> start_round(game.current_player_id)
         |> notify_players({:last_move, move_initiator, {:calza, success_status}})

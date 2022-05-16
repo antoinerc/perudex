@@ -33,7 +33,7 @@ defmodule Perudex.Game do
   @type move_result :: {:outbid, bid} | {:calza, boolean} | {:dudo, boolean}
 
   @type player_instruction ::
-          :move
+          {:move, Hand.t()}
           | {:reveal_players_hands, [{player_id, Hand.t()}]}
           | {:last_move, player_id, move_result}
           | :unauthorized_move
@@ -58,7 +58,7 @@ defmodule Perudex.Game do
         {:notify_player, 2, {:game_started, [1, 2]}},
         {:notify_player, 1, {:new_hand, %Perudex.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5}}},
         {:notify_player, 2, {:new_hand, %Perudex.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5}}},
-        {:notify_player, 1, :move}
+        {:notify_player, 1, {:move, %Perudex.Hand{dice: [5, 5, 2, 6, 4]}}
       ],
       %Perudex.Game{
         all_players: [1, 2],
@@ -395,8 +395,10 @@ defmodule Perudex.Game do
 
   defp tell_current_player_to_move(%Game{current_player_id: nil} = game), do: game
 
-  defp tell_current_player_to_move(game),
-    do: notify_player(game, game.current_player_id, :move)
+  defp tell_current_player_to_move(%Game{current_player_id: id, players_hands: hands} = game) do
+    player_hand = Enum.find(hands, fn hand -> hand.player_id == id end)
+    notify_player(game, id, {:move, player_hand.hand})
+  end
 
   defp initialize_players_hands(%Game{max_dice: max_dice, remaining_players: players} = game) do
     %Game{

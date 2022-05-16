@@ -147,10 +147,8 @@ defmodule Perudex.Game do
       }}
   """
   @spec play_move(t, player_id, move) :: {[instruction], t()}
-  def play_move(%Game{current_player_id: player_id} = game, player_id, move) do
-    %Game{game | instructions: []}
-    |> handle_move(move)
-  end
+  def play_move(%Game{current_player_id: player_id} = game, player_id, move),
+    do: handle_move(%Game{game | instructions: []}, move)
 
   def play_move(game, player_id, _move) do
     %Game{game | instructions: []}
@@ -173,9 +171,7 @@ defmodule Perudex.Game do
     end
   end
 
-  defp handle_move(game, :calza) do
-    move_initiator = game.current_player_id
-
+  defp handle_move(%Game{current_player_id: move_initiator} = game, :calza) do
     case calza(game) do
       {:ok, game, success_status} ->
         end_round(game, {:last_move, move_initiator, {:calza, success_status}})
@@ -187,9 +183,7 @@ defmodule Perudex.Game do
     end
   end
 
-  defp handle_move(game, :dudo) do
-    move_initiator = game.current_player_id
-
+  defp handle_move(%Game{current_player_id: move_initiator} = game, :dudo) do
     case dudo(game) do
       {:ok, game, success_status} ->
         end_round(game, {:last_move, move_initiator, {:dudo, success_status}})
@@ -218,7 +212,7 @@ defmodule Perudex.Game do
         {:ok,
          %Game{
            game
-           | current_player_id: find_previous_player(game),
+           | current_player_id: previous_player,
              players_hands:
                Enum.map(players_hands, fn hand ->
                  if hand.player_id == previous_player,

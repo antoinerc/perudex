@@ -48,14 +48,14 @@ defmodule Perudex.IntegrationTest do
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 4}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 1}}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 4}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 1}}}
 
     assert_receive {:player_1, {:new_hand, %{dice: _, remaining_dice: 4}}}
     assert_receive {:player_2, {:new_hand, %{dice: _, remaining_dice: 5}}}
@@ -75,14 +75,14 @@ defmodule Perudex.IntegrationTest do
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 3}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 3}}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 3}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 3}}}
 
     assert_receive {:player_1, {:new_hand, %{dice: _, remaining_dice: 3}}}
     assert_receive {:player_2, {:new_hand, %{dice: _, remaining_dice: 5}}}
@@ -102,14 +102,14 @@ defmodule Perudex.IntegrationTest do
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 2}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 3}}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 2}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 3}}}
 
     assert_receive {:player_1, {:new_hand, %{dice: _, remaining_dice: 2}}}
     assert_receive {:player_2, {:new_hand, %{dice: _, remaining_dice: 5}}}
@@ -129,14 +129,14 @@ defmodule Perudex.IntegrationTest do
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 1}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 3}}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 1}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 3}}}
 
     assert_receive {:player_1, {:new_hand, %{dice: _, remaining_dice: 1}}}
     assert_receive {:player_2, {:new_hand, %{dice: _, remaining_dice: 5}}}
@@ -156,14 +156,14 @@ defmodule Perudex.IntegrationTest do
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 0}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 3}}}
 
     assert_receive {:player_2,
                     {:reveal_players_hands,
                      [
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 0}, player_id: :player_1},
                        %{hand: %Perudex.Hand{dice: _, remaining_dice: 5}, player_id: :player_2}
-                     ]}}
+                     ], {_, 3}}}
 
     assert_receive {:player_1, {:loser, :player_1}}
     assert_receive {:player_2, {:loser, :player_1}}
@@ -182,8 +182,8 @@ defmodule Perudex.IntegrationTest do
 
   def move(test_pid, player_id, hand), do: send(test_pid, {player_id, {:move, hand}})
 
-  def reveal_players_hands(test_pid, player_id, hands),
-    do: send(test_pid, {player_id, {:reveal_players_hands, hands}})
+  def reveal_players_hands(test_pid, player_id, hands, result),
+    do: send(test_pid, {player_id, {:reveal_players_hands, hands, result}})
 
   def unauthorized_move(test_pid, player_id), do: send(test_pid, {player_id, :unauthorized_move})
 

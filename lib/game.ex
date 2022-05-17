@@ -91,7 +91,7 @@ defmodule Perudex.Game do
     }
     |> initialize_players_hands()
     |> notify_players({:game_started, player_ids})
-    |> start_round(hd(player_ids))
+    |> start_round()
     |> instructions_and_state()
   end
 
@@ -312,7 +312,7 @@ defmodule Perudex.Game do
     |> notify_players(move_result)
     |> reveal_players_hands()
     |> check_for_loser()
-    |> start_round(game.current_player_id)
+    |> start_round()
     |> instructions_and_state()
   end
 
@@ -347,14 +347,19 @@ defmodule Perudex.Game do
         game
 
       _ ->
-        %Game{
-          game
-          | remaining_players:
-              Enum.filter(game.remaining_players, fn player -> player != loser.player_id end)
-        }
-        |> notify_players({:loser, loser.player_id})
+        game
         |> find_next_player()
+        |> eliminate_player(loser.player_id)
+        |> notify_players({:loser, loser.player_id})
     end
+  end
+
+  defp eliminate_player(%Game{} = game, loser_id) do
+    %Game{
+      game
+      | remaining_players:
+          Enum.filter(game.remaining_players, fn player -> player != loser_id end)
+    }
   end
 
   defp get_current_die_frequency(players_hands, current_die) do
@@ -410,15 +415,15 @@ defmodule Perudex.Game do
     }
   end
 
-  defp start_round(%Game{remaining_players: [winner]} = game, _) do
+  defp start_round(%Game{remaining_players: [winner]} = game) do
     game = %Game{game | current_player_id: nil, players_hands: [], current_bid: nil}
     notify_players(game, {:winner, winner})
   end
 
-  defp start_round(game, next_player) do
+  defp start_round(game) do
     game = %Game{
       game
-      | current_player_id: next_player,
+      |
         players_hands:
           Enum.map(game.remaining_players, fn p ->
             %{

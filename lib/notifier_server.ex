@@ -14,9 +14,14 @@ defmodule Perudex.NotifierServer do
               Game.last_move()
             ) :: any
   @callback move(GameServer.callback_arg(), Game.player_id(), Hand.t()) :: any
-  @callback reveal_players_hands(GameServer.callback_arg(), Game.player_id(), [
-              {Game.player_id(), Perudex.Hand.t()}
-            ]) :: any
+  @callback reveal_players_hands(
+              GameServer.callback_arg(),
+              Game.player_id(),
+              [
+                {Game.player_id(), Perudex.Hand.t()}
+              ],
+              {integer, integer}
+            ) :: any
   @callback unauthorized_move(GameServer.callback_arg(), Game.player_id()) :: any
   @callback invalid_bid(GameServer.callback_arg(), Game.player_id()) :: any
   @callback illegal_move(GameServer.callback_arg(), Game.player_id()) :: any
@@ -47,7 +52,10 @@ defmodule Perudex.NotifierServer do
   defp decode_instruction({:game_started, players}), do: {:start_game, [players]}
   defp decode_instruction({:new_hand, hand}), do: {:new_hand, [hand]}
   defp decode_instruction({:move, hand}), do: {:move, [hand]}
-  defp decode_instruction({:reveal_players_hands, hands}), do: {:reveal_players_hands, [hands]}
+
+  defp decode_instruction({:reveal_players_hands, hands, result}),
+    do: {:reveal_players_hands, [hands, result]}
+
   defp decode_instruction(:unauthorized_move), do: {:unauthorized_move, []}
 
   defp decode_instruction({:last_move, player_id, move_result}),

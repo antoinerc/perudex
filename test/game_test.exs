@@ -318,9 +318,9 @@ defmodule GameTest do
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
 
     p1_hand = Enum.at(game.players_hands, 0)
-    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [5, 5, 1, 5, 5]}}
     p2_hand = Enum.at(game.players_hands, 1)
-    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [5, 5, 5, 5], remaining_dice: 4}}
+    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [5, 5, 1, 5], remaining_dice: 4}}
     game = %Game{game | players_hands: List.replace_at(game.players_hands, 0, p1_hand)}
     game = %Game{game | players_hands: List.replace_at(game.players_hands, 1, p2_hand)}
 
@@ -356,7 +356,7 @@ defmodule GameTest do
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _, {9, 5}}), &1)
            )
   end
 
@@ -408,7 +408,7 @@ defmodule GameTest do
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _, {10, 5}}), &1)
            )
   end
 
@@ -440,7 +440,7 @@ defmodule GameTest do
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _, {_, 5}}), &1)
            )
   end
 
@@ -498,7 +498,7 @@ defmodule GameTest do
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _, {10, 5}}), &1)
            )
   end
 
@@ -546,12 +546,12 @@ defmodule GameTest do
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(1, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(1, {:reveal_players_hands, _, {10, 5}}), &1)
            )
 
     assert Enum.any?(
              instructions,
-             &match?(notify_player_instruction(2, {:reveal_players_hands, _}), &1)
+             &match?(notify_player_instruction(2, {:reveal_players_hands, _, {10, 5}}), &1)
            )
   end
 

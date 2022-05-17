@@ -34,7 +34,7 @@ defmodule Perudex.Game do
 
   @type player_instruction ::
           {:move, Hand.t()}
-          | {:reveal_players_hands, [{player_id, Hand.t()}]}
+          | {:reveal_players_hands, [{player_id, Hand.t()}], {integer, integer}}
           | {:last_move, player_id, move_result}
           | :unauthorized_move
           | :invalid_bid
@@ -316,8 +316,9 @@ defmodule Perudex.Game do
     |> instructions_and_state()
   end
 
-  defp reveal_players_hands(game),
-    do: notify_players(game, {:reveal_players_hands, game.players_hands})
+  defp reveal_players_hands(%Game{players_hands: hands, current_bid: {_, die}} = game),
+    do:
+      notify_players(game, {:reveal_players_hands, hands, {get_current_die_frequency(game), die}})
 
   defp find_next_player(%Game{remaining_players: [winner]} = game),
     do: %Game{game | current_player_id: winner}

@@ -458,9 +458,9 @@ defmodule GameTest do
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
 
     p1_hand = Enum.at(game.players_hands, 0)
-    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [1, 1, 5, 5, 5]}}
     p2_hand = Enum.at(game.players_hands, 1)
-    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [1, 1, 5, 5, 5]}}
 
     game = %Game{game | players_hands: List.replace_at(game.players_hands, 0, p1_hand)}
     game = %Game{game | players_hands: List.replace_at(game.players_hands, 1, p2_hand)}
@@ -507,9 +507,9 @@ defmodule GameTest do
     assert %Game{current_player_id: 1, current_bid: {0, 0}} = game
 
     p1_hand = Enum.at(game.players_hands, 0)
-    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p1_hand = %{p1_hand | hand: %Hand{p1_hand.hand | dice: [1, 1, 5, 5, 5]}}
     p2_hand = Enum.at(game.players_hands, 1)
-    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [5, 5, 5, 5, 5]}}
+    p2_hand = %{p2_hand | hand: %Hand{p2_hand.hand | dice: [1, 1, 5, 5, 5]}}
 
     game = %Game{game | players_hands: List.replace_at(game.players_hands, 0, p1_hand)}
     game = %Game{game | players_hands: List.replace_at(game.players_hands, 1, p2_hand)}
@@ -621,6 +621,7 @@ defmodule GameTest do
 
     assert {instructions, game} = Game.play_move(game, 'a', {:outbid, {2, 5}})
     assert %Game{current_player_id: 'b', current_bid: {2, 5}, players_hands: hands} = game
+
     assert Enum.member?(
              instructions,
              notify_player_instruction(
@@ -628,8 +629,12 @@ defmodule GameTest do
                {:move, Enum.find(hands, fn hand -> hand.player_id == 'b' end).hand}
              )
            )
+
     assert {instructions, game} = Game.play_move(game, 'b', :dudo)
-    assert %Game{current_player_id: 'c', current_bid: {0, 0}, remaining_players: ['a', 'c']} = game
+
+    assert %Game{current_player_id: 'c', current_bid: {0, 0}, remaining_players: ['a', 'c']} =
+             game
+
     assert Enum.member?(instructions, notify_player_instruction('b', {:loser, 'b'}))
   end
 end

@@ -36,9 +36,9 @@ defmodule Perudex.IntegrationTest do
     assert_receive {:player_2, {:last_move, :player_2, {:outbid, {4, 2}}}}
     assert_receive {:player_1, {:move, %{dice: _, remaining_dice: 5}}}
 
-    Perudex.GameServer.move(:game_1, :player_1, {:outbid, {6, 1}})
-    assert_receive {:player_1, {:last_move, :player_1, {:outbid, {6, 1}}}}
-    assert_receive {:player_2, {:last_move, :player_1, {:outbid, {6, 1}}}}
+    Perudex.GameServer.move(:game_1, :player_1, {:outbid, {120, 1}})
+    assert_receive {:player_1, {:last_move, :player_1, {:outbid, {120, 1}}}}
+    assert_receive {:player_2, {:last_move, :player_1, {:outbid, {120, 1}}}}
     assert_receive {:player_2, {:move, %{dice: _, remaining_dice: 5}}}
 
     Perudex.GameServer.move(:game_1, :player_2, :dudo)

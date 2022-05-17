@@ -200,11 +200,11 @@ defmodule Perudex.Game do
   defp dudo(
          %Game{
            players_hands: players_hands,
-           current_bid: {current_count, current_die},
+           current_bid: {current_count, _},
            current_player_id: current_player
          } = game
        ) do
-    current_count_frequency = get_current_die_frequency(players_hands, current_die)
+    current_count_frequency = get_current_die_frequency(game)
     previous_player = find_previous_player(game)
 
     case current_count_frequency < current_count do
@@ -240,11 +240,11 @@ defmodule Perudex.Game do
   defp calza(
          %Game{
            players_hands: players_hands,
-           current_bid: {current_count, current_die},
+           current_bid: {current_count, _},
            current_player_id: current_player
          } = game
        ) do
-    current_count_frequency = get_current_die_frequency(players_hands, current_die)
+    current_count_frequency = get_current_die_frequency(game)
 
     case current_count_frequency == current_count do
       true ->
@@ -362,9 +362,23 @@ defmodule Perudex.Game do
     }
   end
 
-  defp get_current_die_frequency(players_hands, current_die) do
+  defp get_current_die_frequency(%Game{
+         players_hands: players_hands,
+         current_bid: {_, current_die}
+       }) do
     dice_frequencies = get_dice_frequencies(players_hands)
-    if dice_frequencies[current_die] == nil, do: 0, else: dice_frequencies[current_die]
+
+    dice_frequencies =
+      if dice_frequencies[current_die] == nil,
+        do: Map.put(dice_frequencies, current_die, 0),
+        else: dice_frequencies
+
+    dice_frequencies =
+      if dice_frequencies[1] == nil,
+        do: Map.put(dice_frequencies, 1, 0),
+        else: dice_frequencies
+
+    dice_frequencies[current_die] + dice_frequencies[1]
   end
 
   defp get_dice_frequencies(players_hands) do
@@ -423,8 +437,7 @@ defmodule Perudex.Game do
   defp start_round(game) do
     game = %Game{
       game
-      |
-        players_hands:
+      | players_hands:
           Enum.map(game.remaining_players, fn p ->
             %{
               player_id: p,

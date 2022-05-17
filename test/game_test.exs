@@ -583,4 +583,53 @@ defmodule GameTest do
     assert Enum.member?(instructions, notify_player_instruction('a', {:winner, 'a'}))
     assert Enum.member?(instructions, notify_player_instruction('b', {:loser, 'b'}))
   end
+
+  test "when player has no more die, he is eliminated" do
+    {_, game} = Game.start(['a', 'b', 'c'], 1)
+    assert %Game{current_player_id: 'a', current_bid: {0, 0}} = game
+
+    p1_hand = Enum.at(game.players_hands, 0)
+    p2_hand = Enum.at(game.players_hands, 1)
+    p3_hand = Enum.at(game.players_hands, 2)
+
+    game = %Game{
+      game
+      | players_hands:
+          List.replace_at(game.players_hands, 0, %{
+            p1_hand
+            | hand: %Hand{p1_hand.hand | dice: [5]}
+          })
+    }
+
+    game = %Game{
+      game
+      | players_hands:
+          List.replace_at(game.players_hands, 1, %{
+            p2_hand
+            | hand: %Hand{p2_hand.hand | dice: [5]}
+          })
+    }
+
+    game = %Game{
+      game
+      | players_hands:
+          List.replace_at(game.players_hands, 2, %{
+            p3_hand
+            | hand: %Hand{p3_hand.hand | dice: [5]}
+          })
+    }
+
+    assert {instructions, game} = Game.play_move(game, 'a', {:outbid, {2, 5}})
+    assert %Game{current_player_id: 'b', current_bid: {2, 5}, players_hands: hands} = game
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction(
+               'b',
+               {:move, Enum.find(hands, fn hand -> hand.player_id == 'b' end).hand}
+             )
+           )
+    assert {instructions, game} = Game.play_move(game, 'b', :dudo)
+    assert %Game{current_player_id: 'c', current_bid: {0, 0}, remaining_players: ['a', 'c']} = game
+    assert Enum.member?(instructions, notify_player_instruction('b', {:loser, 'b'}))
+  end
 end

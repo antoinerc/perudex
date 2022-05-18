@@ -365,6 +365,20 @@ defmodule Perudex.Game do
 
   defp get_current_die_frequency(%Game{
          players_hands: players_hands,
+         current_bid: {_, 1}
+       }) do
+    dice_frequencies = get_dice_frequencies(players_hands)
+
+    dice_frequencies =
+      if dice_frequencies[1] == nil,
+        do: Map.put(dice_frequencies, 1, 0),
+        else: dice_frequencies
+
+    dice_frequencies[1]
+  end
+
+  defp get_current_die_frequency(%Game{
+         players_hands: players_hands,
          current_bid: {_, current_die}
        }) do
     dice_frequencies = get_dice_frequencies(players_hands)

@@ -67,16 +67,7 @@ defmodule Perudex.Game do
         current_player_id: 1,
         instructions: [],
         max_dice: 5,
-        players_hands: [
-          %{
-            hand: %Perudex.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5},
-            player_id: 1
-          },
-          %{
-            hand: %Perudex.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5},
-            player_id: 2
-          }
-        ]
+        players_hands: %{1 => hand: %Perudex.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5}, 2 => %Perudex.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5}}
       }}
   """
   @spec start([player_id], integer) :: {[player_instruction], Perudex.Game.t()}
@@ -106,17 +97,7 @@ defmodule Perudex.Game do
       ...>    current_player_id: 2,
       ...>    instructions: [],
       ...>    max_dice: 5,
-      ...>    players_hands: [
-      ...>      %{
-      ...>        hand: %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
-      ...>        player_id: 1
-      ...>      },
-      ...>      %{
-      ...>        hand: %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
-      ...>        player_id: 2
-      ...>      }
-      ...>    ]
-      ...>  },
+      ...>    players_hands: %{1 => %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5}, 2 => %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5}}},
       ...>  1,
       ...>  {:outbid, {2, 3}})
 
@@ -131,16 +112,7 @@ defmodule Perudex.Game do
         current_player_id: 2,
         instructions: [],
         max_dice: 5,
-        players_hands: [
-          %{
-            hand: %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
-            player_id: 1
-          },
-          %{
-            hand: %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
-            player_id: 2
-          }
-        ]
+        players_hands: %{1 => %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5}, 2 => %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5}}
       }}
   """
   @spec play_move(t, player_id, move) :: {[instruction], t()}
@@ -248,11 +220,6 @@ defmodule Perudex.Game do
                players_hands
                | current_player => Hand.add(players_hands[current_player])
              }
-             #  Map.put(
-             #    players_hands,
-             #    current_player,
-             #    Hand.add(players_hands[current_player])
-             #  )
          }, current_count_frequency == current_count}
 
       _ ->

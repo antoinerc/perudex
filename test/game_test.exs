@@ -39,7 +39,7 @@ defmodule GameTest do
     assert %Game{
              instructions: [],
              max_dice: ^max_dice,
-             all_players: players,
+             all_players: ^players,
              players_hands: %{},
              current_bid: {0, 0}
            } = r

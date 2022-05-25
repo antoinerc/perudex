@@ -7,27 +7,30 @@ defmodule Perudex.Game do
   alias Perudex.Hand
 
   defstruct [
+    :state,
     :current_player_id,
     :all_players,
     :remaining_players,
     :current_bid,
     :players_hands,
     :max_dice,
-    :instructions
+    :instructions,
   ]
 
   @opaque t :: %Game{
+            state: game_state,
             current_player_id: player_id,
             all_players: [player_id],
             current_bid: bid,
             remaining_players: [player_id],
             players_hands: [%{player_id: player_id, hand: Hand.t()}],
             max_dice: integer(),
-            instructions: [instruction]
+            instructions: [instruction],
           }
 
   @type player_id :: any
   @type move :: {:outbid, bid} | :calza | :dudo
+  @type game_state :: :normal | :palifico
   @type instruction :: {:notify_player, player_id, player_instruction}
   @type bid :: {:count, :die}
   @type move_result :: {:outbid, bid} | {:calza, boolean} | {:dudo, boolean}

@@ -4,9 +4,9 @@ defmodule Perudex.Hand do
   """
   alias __MODULE__
 
-  defstruct [:dice, :remaining_dice]
+  defstruct [:dice, :remaining_dice, has_palificoed: false]
 
-  @type t :: %Hand{dice: [die], remaining_dice: integer()}
+  @type t :: %Hand{dice: [die], remaining_dice: integer(), has_palificoed: boolean()}
   @type die :: 1..6
 
   @doc """
@@ -46,16 +46,24 @@ defmodule Perudex.Hand do
 
   @doc """
   Remove a die from the hand if it is not empty.
+  Set has_palificoed to true if the player is dropping to his last die.
 
   ## Examples:
       iex> Perudex.Hand.take(%Perudex.Hand{remaining_dice: 5})
-      %Perudex.Hand{remaining_dice: 4, dice: nil}
+      %Perudex.Hand{remaining_dice: 4, dice: nil, has_palificoed: false}
 
       iex> Perudex.Hand.take(%Perudex.Hand{remaining_dice: 0})
-      %Perudex.Hand{remaining_dice: 0, dice: nil}
+      %Perudex.Hand{remaining_dice: 0, dice: nil, has_palificoed: false}
+
+      iex> Perudex.Hand.take(%Perudex.Hand{remaining_dice: 2})
+      %Perudex.Hand{remaining_dice: 1, dice: nil, has_palificoed: true}
   """
   def take(%Hand{remaining_dice: 0} = hand) do
     hand
+  end
+
+  def take(%Hand{remaining_dice: 2} = hand) do
+    %Hand{hand | remaining_dice: 1, has_palificoed: true}
   end
 
   def take(%Hand{remaining_dice: remaining_dice} = hand) do

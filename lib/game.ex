@@ -13,11 +13,11 @@ defmodule Perudex.Game do
     :max_dice,
     :instructions,
     players_hands: %{},
-    state: :normal
+    phase: :normal
   ]
 
   @opaque t :: %Game{
-            state: game_state,
+            phase: game_phase,
             current_player_id: player_id,
             all_players: [player_id],
             current_bid: bid,
@@ -28,14 +28,14 @@ defmodule Perudex.Game do
 
   @type player_id :: any
   @type move :: {:outbid, bid} | :calza | :dudo
-  @type game_state :: :normal | :palifico
+  @type game_phase :: :normal | :palifico
   @type instruction :: {:notify_player, player_id, player_instruction}
   @type bid :: {:count, :die}
   @type move_result :: {:outbid, bid} | {:calza, boolean} | {:dudo, boolean}
 
   @type player_instruction ::
           {:move, Hand.t()}
-          | {:reveal_players_hands, [{player_id, Hand.t()}], {integer, integer}}
+          | {:reveal_players_hands, %{player_id() => Hand.t()}, {integer, integer}}
           | {:last_move, player_id, move_result}
           | :unauthorized_move
           | :invalid_bid
@@ -169,35 +169,21 @@ defmodule Perudex.Game do
   defp dudo(
          %Game{
            players_hands: players_hands,
-           current_bid: {current_count, _},
-           current_player_id: current_player
+           current_bid: {current_count, _}
          } = game
        ) do
     current_count_frequency = get_current_die_frequency(game)
-    previous_player = find_previous_player(game)
+    round_loser = find_dudo_loser(game, current_count_frequency)
 
-    case current_count_frequency < current_count do
-      true ->
-        {:ok,
-         %Game{
-           game
-           | current_player_id: previous_player,
-             players_hands: %{
-               players_hands
-               | previous_player => Hand.take(players_hands[previous_player])
-             }
-         }, current_count_frequency < current_count}
-
-      _ ->
-        {:ok,
-         %Game{
-           game
-           | players_hands: %{
-               players_hands
-               | current_player => Hand.take(players_hands[current_player])
-             }
-         }, current_count_frequency < current_count}
-    end
+    {:ok,
+     %Game{
+       game
+       | current_player_id: round_loser,
+         players_hands: %{
+           players_hands
+           | round_loser => Hand.take(players_hands[round_loser])
+         }
+     }, current_count_frequency < current_count}
   end
 
   defp calza(%Game{current_bid: {0, 0}} = game), do: {:error, game}
@@ -211,27 +197,21 @@ defmodule Perudex.Game do
        ) do
     current_count_frequency = get_current_die_frequency(game)
 
-    case current_count_frequency == current_count do
-      true ->
-        {:ok,
-         %Game{
-           game
-           | players_hands: %{
-               players_hands
-               | current_player => Hand.add(players_hands[current_player])
-             }
-         }, current_count_frequency == current_count}
+    updated_hand =
+      if current_count_frequency == current_count do
+        Hand.add(players_hands[current_player])
+      else
+        Hand.take(players_hands[current_player])
+      end
 
-      _ ->
-        {:ok,
-         %Game{
-           game
-           | players_hands: %{
-               players_hands
-               | current_player => Hand.take(players_hands[current_player])
-             }
-         }, current_count_frequency == current_count}
-    end
+    {:ok,
+     %Game{
+       game
+       | players_hands: %{
+           players_hands
+           | current_player => updated_hand
+         }
+     }, current_count_frequency == current_count}
   end
 
   defp outbid(game, {count, dice}) when not is_integer(dice) or not is_integer(count),
@@ -267,6 +247,19 @@ defmodule Perudex.Game do
 
   defp outbid(%Game{} = game, {new_count, new_dice}),
     do: {:ok, %Game{game | instructions: [], current_bid: {new_count, new_dice}}}
+
+  defp find_dudo_loser(
+         %Game{current_player_id: current_player, current_bid: {current_count, _}} = game,
+         current_count_frequency
+       ) do
+    previous_player = find_previous_player(game)
+
+    if current_count_frequency < current_count do
+      previous_player
+    else
+      current_player
+    end
+  end
 
   defp end_round(game, move_result) do
     game

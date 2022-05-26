@@ -2,8 +2,9 @@ defmodule Perudex.NotifierServer do
   @moduledoc """
   This module is a GenServer to handle communication going to the players by defining an interface a module need to implements.
   """
-
   use GenServer, restart: :transient
+
+  alias Perudex.{Game, GameServer, Hand}
 
   @callback start_game(GameServer.callback_arg(), Game.player_id(), [Game.player_id()]) :: any
   @callback new_hand(GameServer.callback_arg(), Game.player_id(), Hand.t()) :: any
@@ -11,7 +12,7 @@ defmodule Perudex.NotifierServer do
               GameServer.callback_arg(),
               Game.player_id(),
               Game.player_id(),
-              Game.last_move()
+              Game.move_result()
             ) :: any
   @callback move(GameServer.callback_arg(), Game.player_id(), Hand.t()) :: any
   @callback reveal_players_hands(

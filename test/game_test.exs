@@ -653,4 +653,60 @@ defmodule GameTest do
 
     assert Enum.member?(instructions, notify_player_instruction('b', {:loser, 'b'}))
   end
+
+  test "when player drop to one die for the first time, game phase switch to palifico" do
+    {_, game} = Game.start(['a', 'b'], 2)
+    assert %Game{current_player_id: 'a', current_bid: {0, 0}} = game
+
+    game = %Game{
+      game
+      | players_hands: %{
+          game.players_hands
+          | 'a' => %Hand{game.players_hands['a'] | dice: [5, 1]}
+        }
+    }
+
+    game = %Game{
+      game
+      | players_hands: %{
+          game.players_hands
+          | 'b' => %Hand{game.players_hands['b'] | dice: [5, 2]}
+        }
+    }
+
+    assert {_, game} = Game.play_move(game, 'a', {:outbid, {2, 5}})
+    assert {instructions, game} = Game.play_move(game, 'b', :dudo)
+    assert %Game{phase: :palifico} = game
+    assert Enum.member?(instructions, notify_player_instruction('b', {:phase_change, :palifico}))
+    assert Enum.member?(instructions, notify_player_instruction('a', {:phase_change, :palifico}))
+
+    game = %Game{
+      game
+      | players_hands: %{
+          game.players_hands
+          | 'a' => %Hand{game.players_hands['a'] | dice: [5, 1]}
+        }
+    }
+
+    game = %Game{
+      game
+      | players_hands: %{
+          game.players_hands
+          | 'b' => %Hand{game.players_hands['b'] | dice: [5]}
+        }
+    }
+
+    assert {_, game} = Game.play_move(game, 'b', {:outbid, {2, 5}})
+    assert {_, game} = Game.play_move(game, 'a', {:outbid, {3, 5}})
+    assert {instructions, game} = Game.play_move(game, 'b', :calza)
+    assert %Game{phase: :normal} = game
+    assert Enum.member?(instructions, notify_player_instruction('b', {:phase_change, :normal}))
+    assert Enum.member?(instructions, notify_player_instruction('a', {:phase_change, :normal}))
+
+    assert {_, game} = Game.play_move(game, 'b', {:outbid, {5, 5}})
+    assert {instructions, game} = Game.play_move(game, 'a', :dudo)
+    assert %Game{phase: :normal} = game
+    assert not Enum.member?(instructions, notify_player_instruction('a', {:phase_change, :palifico}))
+    assert not Enum.member?(instructions, notify_player_instruction('b', {:phase_change, :normal}))
+  end
 end

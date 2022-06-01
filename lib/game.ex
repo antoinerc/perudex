@@ -44,6 +44,7 @@ defmodule Perudex.Game do
           | {:winner, player_id}
           | {:loser, player_id}
           | {:game_started, [player_id]}
+          | {:phase_change, game_phase}
 
   @doc """
   Initialize a game of Perudo with `players_ids` and specified `max_dice` a player can hold.
@@ -169,11 +170,26 @@ defmodule Perudex.Game do
   defp dudo(
          %Game{
            players_hands: players_hands,
-           current_bid: {current_count, _}
+           current_bid: {current_count, _},
+           phase: current_phase
          } = game
        ) do
     current_count_frequency = get_current_die_frequency(game)
     round_loser = find_dudo_loser(game, current_count_frequency)
+    %Hand{has_palificoed: has_already_used_palifico} = players_hands[round_loser]
+    updated_hand = Hand.take(players_hands[round_loser])
+
+    phase =
+      if updated_hand.has_palificoed and not has_already_used_palifico,
+        do: :palifico,
+        else: :normal
+
+    game =
+      if current_phase != phase do
+        notify_players(game, {:phase_change, phase})
+      else
+        game
+      end
 
     {:ok,
      %Game{
@@ -181,8 +197,9 @@ defmodule Perudex.Game do
        | current_player_id: round_loser,
          players_hands: %{
            players_hands
-           | round_loser => Hand.take(players_hands[round_loser])
-         }
+           | round_loser => updated_hand
+         },
+         phase: phase
      }, current_count_frequency < current_count}
   end
 
@@ -192,10 +209,12 @@ defmodule Perudex.Game do
          %Game{
            players_hands: players_hands,
            current_bid: {current_count, _},
-           current_player_id: current_player
+           current_player_id: current_player,
+           phase: current_phase
          } = game
        ) do
     current_count_frequency = get_current_die_frequency(game)
+    %Hand{has_palificoed: has_already_used_palifico} = players_hands[current_player]
 
     updated_hand =
       if current_count_frequency == current_count do
@@ -204,13 +223,23 @@ defmodule Perudex.Game do
         Hand.take(players_hands[current_player])
       end
 
+    phase =
+      if updated_hand.has_palificoed and not has_already_used_palifico,
+        do: :palifico,
+        else: :normal
+
+    game =
+      if current_phase != phase do
+        notify_players(game, {:phase_change, phase})
+      else
+        game
+      end
+
     {:ok,
      %Game{
        game
-       | players_hands: %{
-           players_hands
-           | current_player => updated_hand
-         }
+       | players_hands: %{players_hands | current_player => updated_hand},
+         phase: phase
      }, current_count_frequency == current_count}
   end
 

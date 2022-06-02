@@ -726,7 +726,8 @@ defmodule GameTest do
       game
       | players_hands: %{
           game.players_hands
-          | 'a' => %Hand{game.players_hands['a'] | dice: [5]}, 'b' => %Hand{game.players_hands['b'] | dice: [5, 2]}
+          | 'a' => %Hand{game.players_hands['a'] | dice: [5]},
+            'b' => %Hand{game.players_hands['b'] | dice: [5, 2]}
         },
         phase: :palifico
     }
@@ -738,5 +739,25 @@ defmodule GameTest do
     assert {_, game} = Game.play_move(game, 'b', {:outbid, {5, 1}})
     assert {instructions, _} = Game.play_move(game, 'a', {:outbid, {5, 2}})
     assert Enum.member?(instructions, notify_player_instruction('a', :invalid_bid))
+  end
+
+  test "during palifico, 1s are not wildcards" do
+    {_, game} = Game.start(['a', 'b', 'c'], 2)
+    assert %Game{current_player_id: 'a', current_bid: {0, 0}} = game
+
+    game = %Game{
+      game
+      | players_hands: %{
+          game.players_hands
+          | 'a' => %Hand{game.players_hands['a'] | dice: [5]},
+            'b' => %Hand{game.players_hands['b'] | dice: [5, 1]},
+            'c' => %Hand{game.players_hands['b'] | dice: [5, 1]},
+        },
+        current_bid: {3, 5},
+        phase: :palifico
+    }
+
+    assert {instructions, _} = Game.play_move(game, 'a', :calza)
+    assert Enum.member?(instructions, notify_player_instruction('a', {:last_move, 'a', {:calza, true}}))
   end
 end

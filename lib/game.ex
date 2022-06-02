@@ -379,7 +379,8 @@ defmodule Perudex.Game do
 
   defp get_current_die_frequency(%Game{
          players_hands: players_hands,
-         current_bid: {_, current_die}
+         current_bid: {_, current_die},
+         phase: :normal
        }) do
     dice_frequencies = get_dice_frequencies(players_hands)
 
@@ -394,6 +395,21 @@ defmodule Perudex.Game do
         else: dice_frequencies
 
     dice_frequencies[current_die] + dice_frequencies[1]
+  end
+
+  defp get_current_die_frequency(%Game{
+         players_hands: players_hands,
+         current_bid: {_, current_die},
+         phase: :palifico
+       }) do
+    dice_frequencies = get_dice_frequencies(players_hands)
+
+    dice_frequencies =
+      if dice_frequencies[current_die] == nil,
+        do: Map.put(dice_frequencies, current_die, 0),
+        else: dice_frequencies
+
+    dice_frequencies[current_die]
   end
 
   defp get_dice_frequencies(players_hands) do

@@ -246,7 +246,16 @@ defmodule Perudex.Game do
   defp outbid(game, {count, dice}) when not is_integer(dice) or not is_integer(count),
     do: {:error, game}
 
-  defp outbid(%Game{current_bid: {0, 0}} = game, {_new_count, 1}), do: {:error, game}
+  defp outbid(%Game{current_bid: {0, 0}, phase: :normal} = game, {_new_count, 1}),
+    do: {:error, game}
+
+  defp outbid(%Game{current_bid: {0, 0}, phase: :palifico} = game, {new_count, new_value}),
+    do: {:ok, %Game{game | instructions: [], current_bid: {new_count, new_value}}}
+
+  defp outbid(%Game{current_bid: {old_count, value}, phase: :palifico} = game, {new_count, value})
+       when new_count > old_count,
+       do: {:ok, %Game{game | instructions: [], current_bid: {new_count, value}}}
+
   defp outbid(%Game{current_bid: {count, dice}} = game, {count, dice}), do: {:error, game}
   defp outbid(game, {_, dice}) when dice > 6, do: {:error, game}
   defp outbid(game, {count, dice}) when dice < 1 or count < 1, do: {:error, game}

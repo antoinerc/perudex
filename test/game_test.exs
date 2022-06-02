@@ -706,7 +706,37 @@ defmodule GameTest do
     assert {_, game} = Game.play_move(game, 'b', {:outbid, {5, 5}})
     assert {instructions, game} = Game.play_move(game, 'a', :dudo)
     assert %Game{phase: :normal} = game
-    assert not Enum.member?(instructions, notify_player_instruction('a', {:phase_change, :palifico}))
-    assert not Enum.member?(instructions, notify_player_instruction('b', {:phase_change, :normal}))
+
+    assert not Enum.member?(
+             instructions,
+             notify_player_instruction('a', {:phase_change, :palifico})
+           )
+
+    assert not Enum.member?(
+             instructions,
+             notify_player_instruction('b', {:phase_change, :normal})
+           )
+  end
+
+  test "when game phase is set to palifico, value cannot be change after initial bet" do
+    {_, game} = Game.start(['a', 'b'], 2)
+    assert %Game{current_player_id: 'a', current_bid: {0, 0}} = game
+
+    game = %Game{
+      game
+      | players_hands: %{
+          game.players_hands
+          | 'a' => %Hand{game.players_hands['a'] | dice: [5]}, 'b' => %Hand{game.players_hands['b'] | dice: [5, 2]}
+        },
+        phase: :palifico
+    }
+
+    assert {_, game} = Game.play_move(game, 'a', {:outbid, {3, 1}})
+    assert {instructions, game} = Game.play_move(game, 'b', {:outbid, {3, 2}})
+    assert Enum.member?(instructions, notify_player_instruction('b', :invalid_bid))
+
+    assert {_, game} = Game.play_move(game, 'b', {:outbid, {5, 1}})
+    assert {instructions, _} = Game.play_move(game, 'a', {:outbid, {5, 2}})
+    assert Enum.member?(instructions, notify_player_instruction('a', :invalid_bid))
   end
 end

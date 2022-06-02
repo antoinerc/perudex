@@ -143,14 +143,13 @@ defmodule Perudex.IntegrationTest do
     assert_receive {:player_1, {:last_move, :player_2, {:dudo, true}}}
     assert_receive {:player_2, {:last_move, :player_2, {:dudo, true}}}
     assert_receive {:player_1, {:move, %{dice: _, remaining_dice: 1}}}
+    assert_receive {:player_1, {:phase_change, :palifico}}
+    assert_receive {:player_2, {:phase_change, :palifico}}
 
     Perudex.GameServer.move(:game_1, :player_1, {:outbid, {10, 3}})
     assert_receive {:player_1, {:last_move, :player_1, {:outbid, {10, 3}}}}
     assert_receive {:player_2, {:last_move, :player_1, {:outbid, {10, 3}}}}
     assert_receive {:player_2, {:move, %{dice: _, remaining_dice: 5}}}
-    assert_receive {:player_1, {:phase_change, :palifico}}
-    assert_receive {:player_2, {:phase_change, :palifico}}
-
 
     Perudex.GameServer.move(:game_1, :player_2, :dudo)
 
@@ -201,5 +200,7 @@ defmodule Perudex.IntegrationTest do
     do: send(test_pid, {player_id, {:winner, winner_id}})
 
   def loser(test_pid, player_id, loser_id), do: send(test_pid, {player_id, {:loser, loser_id}})
-  def phase_change(test_pid, player_id, phase), do: send(test_pid, {player_id, {:phase_change, phase}})
+
+  def phase_change(test_pid, player_id, phase),
+    do: send(test_pid, {player_id, {:phase_change, phase}})
 end

@@ -320,15 +320,8 @@ defmodule GameTest do
       game
       | players_hands: %{
           game.players_hands
-          | 1 => %Hand{game.players_hands[1] | dice: [5, 5, 1, 5, 5]}
-        }
-    }
-
-    game = %Game{
-      game
-      | players_hands: %{
-          game.players_hands
-          | 2 => %Hand{game.players_hands[2] | dice: [5, 1, 5, 5]}
+          | 1 => %Hand{game.players_hands[1] | dice: [5, 5, 1, 5, 5]},
+            2 => %Hand{game.players_hands[2] | dice: [5, 1, 5, 5]}
         }
     }
 
@@ -376,15 +369,8 @@ defmodule GameTest do
       game
       | players_hands: %{
           game.players_hands
-          | 1 => %Hand{game.players_hands[1] | dice: [5, 5, 5, 5, 5]}
-        }
-    }
-
-    game = %Game{
-      game
-      | players_hands: %{
-          game.players_hands
-          | 2 => %Hand{game.players_hands[2] | dice: [5, 5, 5, 5, 5]}
+          | 1 => %Hand{game.players_hands[1] | dice: [5, 5, 5, 5, 5]},
+            2 => %Hand{game.players_hands[2] | dice: [5, 5, 5, 5, 5]}
         }
     }
 
@@ -473,15 +459,8 @@ defmodule GameTest do
       game
       | players_hands: %{
           game.players_hands
-          | 1 => %Hand{game.players_hands[1] | dice: [1, 1, 5, 5, 5]}
-        }
-    }
-
-    game = %Game{
-      game
-      | players_hands: %{
-          game.players_hands
-          | 2 => %Hand{game.players_hands[2] | dice: [1, 1, 5, 5, 5]}
+          | 1 => %Hand{game.players_hands[1] | dice: [1, 1, 5, 5, 5]},
+            2 => %Hand{game.players_hands[2] | dice: [1, 1, 5, 5, 5]}
         }
     }
 
@@ -529,15 +508,8 @@ defmodule GameTest do
       game
       | players_hands: %{
           game.players_hands
-          | 1 => %Hand{game.players_hands[1] | dice: [1, 1, 5, 5, 5]}
-        }
-    }
-
-    game = %Game{
-      game
-      | players_hands: %{
-          game.players_hands
-          | 2 => %Hand{game.players_hands[2] | dice: [1, 1, 5, 5, 5]}
+          | 1 => %Hand{game.players_hands[1] | dice: [1, 1, 5, 5, 5]},
+            2 => %Hand{game.players_hands[2] | dice: [1, 1, 5, 5, 5]}
         }
     }
 
@@ -588,12 +560,11 @@ defmodule GameTest do
 
     game = %Game{
       game
-      | players_hands: %{game.players_hands | 'a' => %Hand{game.players_hands['a'] | dice: [5]}}
-    }
-
-    game = %Game{
-      game
-      | players_hands: %{game.players_hands | 'b' => %Hand{game.players_hands['b'] | dice: [5]}}
+      | players_hands: %{
+          game.players_hands
+          | 'a' => %Hand{game.players_hands['a'] | dice: [5]},
+            'b' => %Hand{game.players_hands['b'] | dice: [5]}
+        }
     }
 
     assert {instructions, game} = Game.play_move(game, 'a', {:outbid, {2, 5}})
@@ -619,17 +590,12 @@ defmodule GameTest do
 
     game = %Game{
       game
-      | players_hands: %{game.players_hands | 'a' => %Hand{game.players_hands['a'] | dice: [5]}}
-    }
-
-    game = %Game{
-      game
-      | players_hands: %{game.players_hands | 'b' => %Hand{game.players_hands['b'] | dice: [5]}}
-    }
-
-    game = %Game{
-      game
-      | players_hands: %{game.players_hands | 'c' => %Hand{game.players_hands['c'] | dice: [5]}}
+      | players_hands: %{
+          game.players_hands
+          | 'a' => %Hand{game.players_hands['a'] | dice: [5]},
+            'b' => %Hand{game.players_hands['b'] | dice: [5]},
+            'c' => %Hand{game.players_hands['c'] | dice: [5]}
+        }
     }
 
     assert {instructions, game} = Game.play_move(game, 'a', {:outbid, {2, 5}})
@@ -662,15 +628,8 @@ defmodule GameTest do
       game
       | players_hands: %{
           game.players_hands
-          | 'a' => %Hand{game.players_hands['a'] | dice: [5, 1]}
-        }
-    }
-
-    game = %Game{
-      game
-      | players_hands: %{
-          game.players_hands
-          | 'b' => %Hand{game.players_hands['b'] | dice: [5, 2]}
+          | 'a' => %Hand{game.players_hands['a'] | dice: [5, 1]},
+            'b' => %Hand{game.players_hands['b'] | dice: [5, 2]}
         }
     }
 
@@ -684,15 +643,8 @@ defmodule GameTest do
       game
       | players_hands: %{
           game.players_hands
-          | 'a' => %Hand{game.players_hands['a'] | dice: [5, 1]}
-        }
-    }
-
-    game = %Game{
-      game
-      | players_hands: %{
-          game.players_hands
-          | 'b' => %Hand{game.players_hands['b'] | dice: [5]}
+          | 'a' => %Hand{game.players_hands['a'] | dice: [5, 1]},
+            'b' => %Hand{game.players_hands['b'] | dice: [5]}
         }
     }
 
@@ -700,8 +652,16 @@ defmodule GameTest do
     assert {_, game} = Game.play_move(game, 'a', {:outbid, {3, 5}})
     assert {instructions, game} = Game.play_move(game, 'b', :calza)
     assert %Game{phase: :normal} = game
-    assert not Enum.member?(instructions, notify_player_instruction('b', {:phase_change, :normal}))
-    assert not Enum.member?(instructions, notify_player_instruction('a', {:phase_change, :normal}))
+
+    assert not Enum.member?(
+             instructions,
+             notify_player_instruction('b', {:phase_change, :normal})
+           )
+
+    assert not Enum.member?(
+             instructions,
+             notify_player_instruction('a', {:phase_change, :normal})
+           )
   end
 
   test "when game phase is set to palifico, value cannot be change after initial bet" do
@@ -737,13 +697,17 @@ defmodule GameTest do
           game.players_hands
           | 'a' => %Hand{game.players_hands['a'] | dice: [5]},
             'b' => %Hand{game.players_hands['b'] | dice: [5, 1]},
-            'c' => %Hand{game.players_hands['b'] | dice: [5, 1]},
+            'c' => %Hand{game.players_hands['b'] | dice: [5, 1]}
         },
         current_bid: {3, 5},
         phase: :palifico
     }
 
     assert {instructions, _} = Game.play_move(game, 'a', :calza)
-    assert Enum.member?(instructions, notify_player_instruction('a', {:last_move, 'a', {:calza, true}}))
+
+    assert Enum.member?(
+             instructions,
+             notify_player_instruction('a', {:last_move, 'a', {:calza, true}})
+           )
   end
 end

@@ -700,22 +700,8 @@ defmodule GameTest do
     assert {_, game} = Game.play_move(game, 'a', {:outbid, {3, 5}})
     assert {instructions, game} = Game.play_move(game, 'b', :calza)
     assert %Game{phase: :normal} = game
-    assert Enum.member?(instructions, notify_player_instruction('b', {:phase_change, :normal}))
-    assert Enum.member?(instructions, notify_player_instruction('a', {:phase_change, :normal}))
-
-    assert {_, game} = Game.play_move(game, 'b', {:outbid, {5, 5}})
-    assert {instructions, game} = Game.play_move(game, 'a', :dudo)
-    assert %Game{phase: :normal} = game
-
-    assert not Enum.member?(
-             instructions,
-             notify_player_instruction('a', {:phase_change, :palifico})
-           )
-
-    assert not Enum.member?(
-             instructions,
-             notify_player_instruction('b', {:phase_change, :normal})
-           )
+    assert not Enum.member?(instructions, notify_player_instruction('b', {:phase_change, :normal}))
+    assert not Enum.member?(instructions, notify_player_instruction('a', {:phase_change, :normal}))
   end
 
   test "when game phase is set to palifico, value cannot be change after initial bet" do

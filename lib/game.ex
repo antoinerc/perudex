@@ -13,11 +13,13 @@ defmodule Perudex.Game do
     :max_dice,
     :instructions,
     players_hands: %{},
-    phase: :normal
+    phase: :normal,
+    old_phase: :normal
   ]
 
   @opaque t :: %Game{
             phase: game_phase,
+            old_phase: game_phase,
             current_player_id: player_id,
             all_players: [player_id],
             current_bid: bid,
@@ -184,13 +186,6 @@ defmodule Perudex.Game do
         do: :palifico,
         else: :normal
 
-    game =
-      if current_phase != phase do
-        notify_players(game, {:phase_change, phase})
-      else
-        game
-      end
-
     {:ok,
      %Game{
        game
@@ -199,7 +194,8 @@ defmodule Perudex.Game do
            players_hands
            | round_loser => updated_hand
          },
-         phase: phase
+         phase: phase,
+         old_phase: current_phase
      }, current_count_frequency < current_count}
   end
 
@@ -228,18 +224,12 @@ defmodule Perudex.Game do
         do: :palifico,
         else: :normal
 
-    game =
-      if current_phase != phase do
-        notify_players(game, {:phase_change, phase})
-      else
-        game
-      end
-
     {:ok,
      %Game{
        game
        | players_hands: %{players_hands | current_player => updated_hand},
-         phase: phase
+         phase: phase,
+         old_phase: current_phase
      }, current_count_frequency == current_count}
   end
 
@@ -460,6 +450,12 @@ defmodule Perudex.Game do
       | players_hands: Map.new(game.players_hands, fn {id, hand} -> {id, Hand.new(hand)} end),
         current_bid: {0, 0}
     }
+
+    game = if game.phase != game.old_phase do
+      notify_players(game, {:phase_change, game.phase})
+    else
+      game
+    end
 
     Enum.reduce(
       game.players_hands,

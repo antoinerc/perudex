@@ -2,8 +2,9 @@ defmodule Perudex.NotifierServer do
   @moduledoc """
   This module is a GenServer to handle communication going to the players by defining an interface a module need to implements.
   """
-
   use GenServer, restart: :transient
+
+  alias Perudex.{Game, GameServer, Hand}
 
   @callback start_game(GameServer.callback_arg(), Game.player_id(), [Game.player_id()]) :: any
   @callback new_hand(GameServer.callback_arg(), Game.player_id(), Hand.t()) :: any
@@ -11,7 +12,7 @@ defmodule Perudex.NotifierServer do
               GameServer.callback_arg(),
               Game.player_id(),
               Game.player_id(),
-              Game.last_move()
+              Game.move_result()
             ) :: any
   @callback move(GameServer.callback_arg(), Game.player_id(), Hand.t()) :: any
   @callback reveal_players_hands(
@@ -27,6 +28,7 @@ defmodule Perudex.NotifierServer do
   @callback illegal_move(GameServer.callback_arg(), Game.player_id()) :: any
   @callback winner(GameServer.callback_arg(), Game.player_id(), Game.player_id()) :: any
   @callback loser(GameServer.callback_arg(), Game.player_id(), Game.player_id()) :: any
+  @callback phase_change(GameServer.callback_arg(), Game.player_id(), Game.game_phase()) :: any
 
   def start_link({game_id, player}),
     do:
@@ -65,6 +67,7 @@ defmodule Perudex.NotifierServer do
   defp decode_instruction(:illegal_move), do: {:illegal_move, []}
   defp decode_instruction({:winner, winner_id}), do: {:winner, [winner_id]}
   defp decode_instruction({:loser, loser_id}), do: {:loser, [loser_id]}
+  defp decode_instruction({:phase_change, phase}), do: {:phase_change, [phase]}
 
   defp service_name(game_id, player_id),
     do: Perudex.service_name({__MODULE__, game_id, player_id})

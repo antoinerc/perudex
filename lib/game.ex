@@ -9,32 +9,35 @@ defmodule Perudex.Game do
   defstruct [
     :current_player_id,
     :all_players,
-    :remaining_players,
     :current_bid,
-    :players_hands,
     :max_dice,
-    :instructions
+    :instructions,
+    players_hands: %{},
+    phase: :normal,
+    old_phase: :normal
   ]
 
   @opaque t :: %Game{
+            phase: game_phase,
+            old_phase: game_phase,
             current_player_id: player_id,
             all_players: [player_id],
             current_bid: bid,
-            remaining_players: [player_id],
-            players_hands: [%{player_id: player_id, hand: Hand.t()}],
+            players_hands: %{player_id: Hand.t()},
             max_dice: integer(),
             instructions: [instruction]
           }
 
   @type player_id :: any
   @type move :: {:outbid, bid} | :calza | :dudo
+  @type game_phase :: :normal | :palifico
   @type instruction :: {:notify_player, player_id, player_instruction}
   @type bid :: {:count, :die}
   @type move_result :: {:outbid, bid} | {:calza, boolean} | {:dudo, boolean}
 
   @type player_instruction ::
           {:move, Hand.t()}
-          | {:reveal_players_hands, [{player_id, Hand.t()}], {integer, integer}}
+          | {:reveal_players_hands, %{player_id() => Hand.t()}, {integer, integer}}
           | {:last_move, player_id, move_result}
           | :unauthorized_move
           | :invalid_bid
@@ -43,6 +46,7 @@ defmodule Perudex.Game do
           | {:winner, player_id}
           | {:loser, player_id}
           | {:game_started, [player_id]}
+          | {:phase_change, game_phase}
 
   @doc """
   Initialize a game of Perudo with `players_ids` and specified `max_dice` a player can hold.
@@ -66,17 +70,7 @@ defmodule Perudex.Game do
         current_player_id: 1,
         instructions: [],
         max_dice: 5,
-        players_hands: [
-          %{
-            hand: %Perudex.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5},
-            player_id: 1
-          },
-          %{
-            hand: %Perudex.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5},
-            player_id: 2
-          }
-        ],
-        remaining_players: [1, 2]
+        players_hands: %{1 => hand: %Perudex.Hand{dice: [5, 5, 2, 6, 4], remaining_dice: 5}, 2 => %Perudex.Hand{dice: [1, 3, 6, 4, 2], remaining_dice: 5}}
       }}
   """
   @spec start([player_id], integer) :: {[player_instruction], Perudex.Game.t()}
@@ -84,12 +78,11 @@ defmodule Perudex.Game do
     %Game{
       current_player_id: hd(player_ids),
       all_players: player_ids,
-      remaining_players: player_ids,
-      players_hands: [],
+      players_hands:
+        Map.new(player_ids, fn id -> {id, Hand.new(%Hand{remaining_dice: max_dice})} end),
       max_dice: max_dice,
       instructions: []
     }
-    |> initialize_players_hands()
     |> notify_players({:game_started, player_ids})
     |> start_round()
     |> instructions_and_state()
@@ -107,18 +100,7 @@ defmodule Perudex.Game do
       ...>    current_player_id: 2,
       ...>    instructions: [],
       ...>    max_dice: 5,
-      ...>    players_hands: [
-      ...>      %{
-      ...>        hand: %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
-      ...>        player_id: 1
-      ...>      },
-      ...>      %{
-      ...>        hand: %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
-      ...>        player_id: 2
-      ...>      }
-      ...>    ],
-      ...>    remaining_players: [1, 2]
-      ...>  },
+      ...>    players_hands: %{1 => %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5}, 2 => %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5}}},
       ...>  1,
       ...>  {:outbid, {2, 3}})
 
@@ -133,17 +115,7 @@ defmodule Perudex.Game do
         current_player_id: 2,
         instructions: [],
         max_dice: 5,
-        players_hands: [
-          %{
-            hand: %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5},
-            player_id: 1
-          },
-          %{
-            hand: %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5},
-            player_id: 2
-          }
-        ],
-        remaining_players: [1, 2]
+        players_hands: %{1 => %Perudex.Hand{dice: [2, 4, 2, 5, 6], remaining_dice: 5}, 2 => %Perudex.Hand{dice: [1, 3, 4, 4, 5], remaining_dice: 5}}
       }}
   """
   @spec play_move(t, player_id, move) :: {[instruction], t()}
@@ -201,38 +173,30 @@ defmodule Perudex.Game do
          %Game{
            players_hands: players_hands,
            current_bid: {current_count, _},
-           current_player_id: current_player
+           phase: current_phase
          } = game
        ) do
     current_count_frequency = get_current_die_frequency(game)
-    previous_player = find_previous_player(game)
+    round_loser = find_dudo_loser(game, current_count_frequency)
+    %Hand{has_palificoed: has_already_used_palifico} = players_hands[round_loser]
+    updated_hand = Hand.take(players_hands[round_loser])
 
-    case current_count_frequency < current_count do
-      true ->
-        {:ok,
-         %Game{
-           game
-           | current_player_id: previous_player,
-             players_hands:
-               Enum.map(players_hands, fn hand ->
-                 if hand.player_id == previous_player,
-                   do: %{hand | hand: Hand.take(hand.hand)},
-                   else: hand
-               end)
-         }, current_count_frequency < current_count}
+    phase =
+      if updated_hand.has_palificoed and not has_already_used_palifico,
+        do: :palifico,
+        else: :normal
 
-      _ ->
-        {:ok,
-         %Game{
-           game
-           | players_hands:
-               Enum.map(players_hands, fn hand ->
-                 if hand.player_id == current_player,
-                   do: %{hand | hand: Hand.take(hand.hand)},
-                   else: hand
-               end)
-         }, current_count_frequency < current_count}
-    end
+    {:ok,
+     %Game{
+       game
+       | current_player_id: round_loser,
+         players_hands: %{
+           players_hands
+           | round_loser => updated_hand
+         },
+         phase: phase,
+         old_phase: current_phase
+     }, current_count_frequency < current_count}
   end
 
   defp calza(%Game{current_bid: {0, 0}} = game), do: {:error, game}
@@ -241,42 +205,47 @@ defmodule Perudex.Game do
          %Game{
            players_hands: players_hands,
            current_bid: {current_count, _},
-           current_player_id: current_player
+           current_player_id: current_player,
+           phase: current_phase
          } = game
        ) do
     current_count_frequency = get_current_die_frequency(game)
+    %Hand{has_palificoed: has_already_used_palifico} = players_hands[current_player]
 
-    case current_count_frequency == current_count do
-      true ->
-        {:ok,
-         %Game{
-           game
-           | players_hands:
-               Enum.map(players_hands, fn player_hand ->
-                 if player_hand.player_id == current_player,
-                   do: %{player_hand | hand: Hand.add(player_hand.hand)},
-                   else: player_hand
-               end)
-         }, current_count_frequency == current_count}
+    updated_hand =
+      if current_count_frequency == current_count do
+        Hand.add(players_hands[current_player])
+      else
+        Hand.take(players_hands[current_player])
+      end
 
-      _ ->
-        {:ok,
-         %Game{
-           game
-           | players_hands:
-               Enum.map(players_hands, fn player_hand ->
-                 if player_hand.player_id == current_player,
-                   do: %{player_hand | hand: Hand.take(player_hand.hand)},
-                   else: player_hand
-               end)
-         }, current_count_frequency == current_count}
-    end
+    phase =
+      if updated_hand.has_palificoed and not has_already_used_palifico,
+        do: :palifico,
+        else: :normal
+
+    {:ok,
+     %Game{
+       game
+       | players_hands: %{players_hands | current_player => updated_hand},
+         phase: phase,
+         old_phase: current_phase
+     }, current_count_frequency == current_count}
   end
 
   defp outbid(game, {count, dice}) when not is_integer(dice) or not is_integer(count),
     do: {:error, game}
 
-  defp outbid(%Game{current_bid: {0, 0}} = game, {_new_count, 1}), do: {:error, game}
+  defp outbid(%Game{current_bid: {0, 0}, phase: :normal} = game, {_new_count, 1}),
+    do: {:error, game}
+
+  defp outbid(%Game{current_bid: {0, 0}, phase: :palifico} = game, {new_count, new_value}),
+    do: {:ok, %Game{game | instructions: [], current_bid: {new_count, new_value}}}
+
+  defp outbid(%Game{current_bid: {old_count, value}, phase: :palifico} = game, {new_count, value})
+       when new_count > old_count,
+       do: {:ok, %Game{game | instructions: [], current_bid: {new_count, value}}}
+
   defp outbid(%Game{current_bid: {count, dice}} = game, {count, dice}), do: {:error, game}
   defp outbid(game, {_, dice}) when dice > 6, do: {:error, game}
   defp outbid(game, {count, dice}) when dice < 1 or count < 1, do: {:error, game}
@@ -307,6 +276,19 @@ defmodule Perudex.Game do
   defp outbid(%Game{} = game, {new_count, new_dice}),
     do: {:ok, %Game{game | instructions: [], current_bid: {new_count, new_dice}}}
 
+  defp find_dudo_loser(
+         %Game{current_player_id: current_player, current_bid: {current_count, _}} = game,
+         current_count_frequency
+       ) do
+    previous_player = find_previous_player(game)
+
+    if current_count_frequency < current_count do
+      previous_player
+    else
+      current_player
+    end
+  end
+
   defp end_round(game, move_result) do
     game
     |> notify_players(move_result)
@@ -320,46 +302,54 @@ defmodule Perudex.Game do
     do:
       notify_players(game, {:reveal_players_hands, hands, {get_current_die_frequency(game), die}})
 
-  defp find_next_player(%Game{remaining_players: [winner]} = game),
-    do: %Game{game | current_player_id: winner}
+  defp find_next_player(%Game{players_hands: players} = game) when map_size(players) == 1 do
+    {id, _} = Enum.at(players, 0)
+    %Game{game | current_player_id: id}
+  end
 
   defp find_next_player(game) do
     current_player_index =
-      Enum.find_index(game.remaining_players, fn id -> id == game.current_player_id end)
+      Enum.find_index(game.players_hands, fn {id, _} -> id == game.current_player_id end)
 
-    next_player =
-      Enum.at(game.remaining_players, current_player_index + 1, hd(game.remaining_players))
+    {next_player_id, _} =
+      Enum.at(game.players_hands, current_player_index + 1, Enum.at(game.players_hands, 0))
 
-    %Game{game | current_player_id: next_player}
+    %Game{game | current_player_id: next_player_id}
   end
 
   defp find_previous_player(game) do
     current_player_index =
-      Enum.find_index(game.remaining_players, fn id -> id == game.current_player_id end)
+      Enum.find_index(game.players_hands, fn {id, _} -> id == game.current_player_id end)
 
-    Enum.at(game.remaining_players, current_player_index - 1, List.last(game.remaining_players))
+    {id, _} =
+      Enum.at(
+        game.players_hands,
+        current_player_index - 1,
+        Enum.at(game.players_hands, Enum.count(game.players_hands) - 1)
+      )
+
+    id
   end
 
   defp check_for_loser(%Game{} = game) do
-    loser = Enum.find(game.players_hands, fn hand -> hand.hand.remaining_dice == 0 end)
+    loser = Enum.find(game.players_hands, fn {_, hand} -> hand.remaining_dice == 0 end)
 
     case loser do
       nil ->
         game
 
-      _ ->
+      {loser_id, _} ->
         game
         |> find_next_player()
-        |> eliminate_player(loser.player_id)
-        |> notify_players({:loser, loser.player_id})
+        |> eliminate_player(loser_id)
+        |> notify_players({:loser, loser_id})
     end
   end
 
   defp eliminate_player(%Game{} = game, loser_id) do
     %Game{
       game
-      | remaining_players:
-          Enum.filter(game.remaining_players, fn player -> player != loser_id end)
+      | players_hands: Map.delete(game.players_hands, loser_id)
     }
   end
 
@@ -379,7 +369,8 @@ defmodule Perudex.Game do
 
   defp get_current_die_frequency(%Game{
          players_hands: players_hands,
-         current_bid: {_, current_die}
+         current_bid: {_, current_die},
+         phase: :normal
        }) do
     dice_frequencies = get_dice_frequencies(players_hands)
 
@@ -396,9 +387,24 @@ defmodule Perudex.Game do
     dice_frequencies[current_die] + dice_frequencies[1]
   end
 
+  defp get_current_die_frequency(%Game{
+         players_hands: players_hands,
+         current_bid: {_, current_die},
+         phase: :palifico
+       }) do
+    dice_frequencies = get_dice_frequencies(players_hands)
+
+    dice_frequencies =
+      if dice_frequencies[current_die] == nil,
+        do: Map.put(dice_frequencies, current_die, 0),
+        else: dice_frequencies
+
+    dice_frequencies[current_die]
+  end
+
   defp get_dice_frequencies(players_hands) do
     players_hands
-    |> Enum.flat_map(fn %{hand: hand} -> hand.dice end)
+    |> Enum.flat_map(fn {_, hand} -> hand.dice end)
     |> Enum.frequencies()
   end
 
@@ -429,47 +435,32 @@ defmodule Perudex.Game do
 
   defp tell_current_player_to_move(%Game{current_player_id: nil} = game), do: game
 
-  defp tell_current_player_to_move(%Game{current_player_id: id, players_hands: hands} = game) do
-    player_hand = Enum.find(hands, fn hand -> hand.player_id == id end)
-    notify_player(game, id, {:move, player_hand.hand})
-  end
+  defp tell_current_player_to_move(%Game{current_player_id: id, players_hands: hands} = game),
+    do: notify_player(game, id, {:move, hands[id]})
 
-  defp initialize_players_hands(%Game{max_dice: max_dice, remaining_players: players} = game) do
-    %Game{
-      game
-      | players_hands:
-          Enum.map(players, fn p ->
-            %{player_id: p, hand: Hand.new(%Hand{remaining_dice: max_dice})}
-          end)
-    }
-  end
-
-  defp start_round(%Game{remaining_players: [winner]} = game) do
-    game = %Game{game | current_player_id: nil, players_hands: [], current_bid: nil}
+  defp start_round(%Game{players_hands: players} = game) when map_size(players) == 1 do
+    game = %Game{game | current_player_id: nil, players_hands: %{}, current_bid: nil}
+    {winner, _} = Enum.at(players, 0)
     notify_players(game, {:winner, winner})
   end
 
   defp start_round(game) do
     game = %Game{
       game
-      | players_hands:
-          Enum.map(game.remaining_players, fn p ->
-            %{
-              player_id: p,
-              hand: Hand.new(Enum.find(game.players_hands, fn x -> x.player_id == p end).hand)
-            }
-          end),
+      | players_hands: Map.new(game.players_hands, fn {id, hand} -> {id, Hand.new(hand)} end),
         current_bid: {0, 0}
     }
 
+    game = if game.phase != game.old_phase do
+      notify_players(game, {:phase_change, game.phase})
+    else
+      game
+    end
+
     Enum.reduce(
-      game.remaining_players,
+      game.players_hands,
       game,
-      &notify_player(
-        &2,
-        &1,
-        {:new_hand, Enum.find(game.players_hands, fn x -> x.player_id == &1 end).hand}
-      )
+      fn {id, _}, game -> notify_player(game, id, {:new_hand, game.players_hands[id]}) end
     )
   end
 

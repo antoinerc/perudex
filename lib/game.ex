@@ -452,6 +452,8 @@ defmodule Perudex.Game do
   defp tell_current_player_to_move(%Game{current_player_id: id, players_hands: hands} = game),
     do: notify_player(game, id, {:move, hands[id]})
 
+  defp announce_next_player(%Game{current_player_id: nil} = game), do: game
+
   defp announce_next_player(%Game{current_player_id: id, all_players: players} = game),
     do:
       notify_players(

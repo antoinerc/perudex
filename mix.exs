@@ -6,7 +6,7 @@ defmodule Perudex.MixProject do
       app: :perudex,
       name: "Perudex",
       description: description(),
-      version: "0.7.0",
+      version: "0.8.0",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),

@@ -15,6 +15,7 @@ defmodule Perudex.NotifierServer do
               Game.move_result()
             ) :: any
   @callback move(GameServer.callback_arg(), Game.player_id(), Hand.t()) :: any
+  @callback next_player(GameServer.callback_arg(), Game.player_id(), Game.player_id()) :: any
   @callback reveal_players_hands(
               GameServer.callback_arg(),
               Game.player_id(),
@@ -54,6 +55,7 @@ defmodule Perudex.NotifierServer do
   defp decode_instruction({:game_started, players}), do: {:start_game, [players]}
   defp decode_instruction({:new_hand, hand}), do: {:new_hand, [hand]}
   defp decode_instruction({:move, hand}), do: {:move, [hand]}
+  defp decode_instruction({:next_player, player_id}), do: {:next_player, [player_id]}
 
   defp decode_instruction({:reveal_players_hands, hands, result}),
     do: {:reveal_players_hands, [hands, result]}

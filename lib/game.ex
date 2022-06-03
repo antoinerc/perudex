@@ -37,6 +37,7 @@ defmodule Perudex.Game do
 
   @type player_instruction ::
           {:move, Hand.t()}
+          | {:announce_next_player, player_id}
           | {:reveal_players_hands, %{player_id() => Hand.t()}, {integer, integer}}
           | {:last_move, player_id, move_result}
           | :unauthorized_move
@@ -128,7 +129,7 @@ defmodule Perudex.Game do
     |> take_instructions()
   end
 
-  defp handle_move(game, {:outbid, bid} = move) do
+  defp handle_move(%Game{} = game, {:outbid, bid} = move) do
     case outbid(game, bid) do
       {:ok, game} ->
         game
@@ -427,9 +428,22 @@ defmodule Perudex.Game do
     )
   end
 
+  defp notify_players(game, players, data) do
+    Enum.reduce(
+      players,
+      game,
+      &notify_player(
+        &2,
+        &1,
+        data
+      )
+    )
+  end
+
   defp instructions_and_state(game) do
     game
     |> tell_current_player_to_move()
+    |> announce_next_player()
     |> take_instructions()
   end
 
@@ -437,6 +451,14 @@ defmodule Perudex.Game do
 
   defp tell_current_player_to_move(%Game{current_player_id: id, players_hands: hands} = game),
     do: notify_player(game, id, {:move, hands[id]})
+
+  defp announce_next_player(%Game{current_player_id: id, all_players: players} = game),
+    do:
+      notify_players(
+        game,
+        Enum.reject(players, fn player -> player == id end),
+        {:next_player, id}
+      )
 
   defp start_round(%Game{players_hands: players} = game) when map_size(players) == 1 do
     game = %Game{game | current_player_id: nil, players_hands: %{}, current_bid: nil}

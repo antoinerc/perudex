@@ -239,16 +239,16 @@ defmodule Perudex.Game do
   defp outbid(%Game{current_bid: {0, 0}, phase: :normal} = game, {_new_count, 1}),
     do: {:error, game}
 
+  defp outbid(%Game{current_bid: {count, dice}} = game, {count, dice}), do: {:error, game}
+  defp outbid(game, {_, dice}) when dice > 6, do: {:error, game}
+  defp outbid(game, {count, dice}) when dice < 1 or count < 1, do: {:error, game}
+
   defp outbid(%Game{current_bid: {0, 0}, phase: :palifico} = game, {new_count, new_value}),
     do: {:ok, %Game{game | instructions: [], current_bid: {new_count, new_value}}}
 
   defp outbid(%Game{current_bid: {old_count, value}, phase: :palifico} = game, {new_count, value})
        when new_count > old_count,
        do: {:ok, %Game{game | instructions: [], current_bid: {new_count, value}}}
-
-  defp outbid(%Game{current_bid: {count, dice}} = game, {count, dice}), do: {:error, game}
-  defp outbid(game, {_, dice}) when dice > 6, do: {:error, game}
-  defp outbid(game, {count, dice}) when dice < 1 or count < 1, do: {:error, game}
 
   defp outbid(%Game{current_bid: {current_count, 1}} = game, {new_count, 1})
        when new_count <= current_count,
@@ -451,11 +451,12 @@ defmodule Perudex.Game do
         current_bid: {0, 0}
     }
 
-    game = if game.phase != game.old_phase do
-      notify_players(game, {:phase_change, game.phase})
-    else
-      game
-    end
+    game =
+      if game.phase != game.old_phase do
+        notify_players(game, {:phase_change, game.phase})
+      else
+        game
+      end
 
     Enum.reduce(
       game.players_hands,

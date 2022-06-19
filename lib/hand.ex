@@ -69,4 +69,22 @@ defmodule Perudex.Hand do
   def take(%Hand{remaining_dice: remaining_dice} = hand) do
     %Hand{hand | remaining_dice: remaining_dice - 1}
   end
+
+  @doc """
+  Returns the frequency of a value in the hand of the player
+
+  ## Examples:
+      iex> Perudex.Hand.count_pip_frequency(%Perudex.Hand{dice: [5, 2, 3, 3, 1]}, 3)
+      2
+  """
+  @spec count_pip_frequency(Perudex.Hand.t(), integer()) :: integer()
+  def count_pip_frequency(%Hand{dice: dice}, pip) do
+    frequency = Enum.frequencies(dice)[pip]
+
+    if frequency == nil do
+      0
+    else
+      frequency
+    end
+  end
 end

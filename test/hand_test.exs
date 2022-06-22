@@ -36,4 +36,9 @@ defmodule HandTest do
     dice_hand = Perudex.Hand.take(dice_hand)
     assert dice_hand.remaining_dice == 0
   end
+
+  test "count the correct amount of pip in a hand" do
+    hand = %Perudex.Hand{dice: [5, 5, 5, 3, 1]}
+    assert 3 == Perudex.Hand.count_pip_frequency(hand, 5)
+  end
 end

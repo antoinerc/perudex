@@ -22,6 +22,7 @@ defmodule BidTest do
     assert not Bid.valid?(%Bid{count: count, value: value - 1}, state[:normal_bid], :normal)
     assert not Bid.valid?(%Bid{count: count + 1, value: value - 1}, state[:normal_bid], :normal)
     assert not Bid.valid?(%Bid{count: count, value: value}, state[:normal_bid], :normal)
+    assert not Bid.valid?(%Bid{count: count, value: value}, state[:normal_bid], :palifico)
     assert not Bid.valid?(%Bid{count: 2, value: 1}, %Bid{count: 2, value: 1}, :normal)
     assert not Bid.valid?(%Bid{count: 1, value: 1}, %Bid{count: 2, value: 1}, :normal)
   end

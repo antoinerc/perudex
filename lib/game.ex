@@ -30,10 +30,10 @@ defmodule Perudex.Game do
           }
 
   @type player_id :: any
-  @type move :: {:outbid, Bit.t()} | :calza | :dudo
+  @type move :: {:outbid, Bid.t()} | :calza | :dudo
   @type game_phase :: :normal | :palifico
   @type instruction :: {:notify_player, player_id, player_instruction}
-  @type move_result :: {:outbid, Bit.t()} | {:calza, boolean} | {:dudo, boolean}
+  @type move_result :: {:outbid, Bid.t()} | {:calza, boolean} | {:dudo, boolean}
 
   @type player_instruction ::
           {:move, Hand.t()}
@@ -325,19 +325,9 @@ defmodule Perudex.Game do
          current_bid: %Bid{value: current_die},
          phase: :normal
        }) do
-    dice_frequencies = get_dice_frequencies(players_hands)
-
-    dice_frequencies =
-      if dice_frequencies[current_die] == nil,
-        do: Map.put(dice_frequencies, current_die, 0),
-        else: dice_frequencies
-
-    dice_frequencies =
-      if dice_frequencies[1] == nil,
-        do: Map.put(dice_frequencies, 1, 0),
-        else: dice_frequencies
-
-    dice_frequencies[current_die] + dice_frequencies[1]
+    Enum.reduce(players_hands, 0, fn {_, dice}, acc ->
+      acc + Hand.count_pip_frequency(dice, current_die) + Hand.count_pip_frequency(dice, 1)
+    end)
   end
 
   defp get_current_die_frequency(%Game{
@@ -345,20 +335,9 @@ defmodule Perudex.Game do
          current_bid: %Bid{value: current_die},
          phase: :palifico
        }) do
-    dice_frequencies = get_dice_frequencies(players_hands)
-
-    dice_frequencies =
-      if dice_frequencies[current_die] == nil,
-        do: Map.put(dice_frequencies, current_die, 0),
-        else: dice_frequencies
-
-    dice_frequencies[current_die]
-  end
-
-  defp get_dice_frequencies(players_hands) do
-    players_hands
-    |> Enum.flat_map(fn {_, hand} -> hand.dice end)
-    |> Enum.frequencies()
+    Enum.reduce(players_hands, 0, fn {_, dice}, acc ->
+      acc + Hand.count_pip_frequency(dice, current_die)
+    end)
   end
 
   defp notify_player(game, player_id, data) do

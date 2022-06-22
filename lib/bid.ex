@@ -1,4 +1,7 @@
 defmodule Perudex.Bid do
+  @moduledoc """
+  Provides logic to validate a bid.
+  """
   alias __MODULE__
 
   @enforce_keys [:count, :value]
@@ -9,6 +12,28 @@ defmodule Perudex.Bid do
           value: integer()
         }
 
+  @doc """
+  Validate that a bid is valid, depending on the current standing bid and the current phase of the game.
+
+  ## Examples
+        iex> Perudex.Bid.valid?(%Perudex.Bid{count: 2, value: 3}, %Perudex.Bid{count: 2, value: 2}, :normal)
+        true
+
+        iex> Perudex.Bid.valid?(%Perudex.Bid{count: 2, value: 2}, %Perudex.Bid{count: 2, value: 2}, :normal)
+        false
+
+        iex> Perudex.Bid.valid?(%Perudex.Bid{count: 5, value: 2}, %Perudex.Bid{count: 2, value: 2}, :normal)
+        true
+
+        iex> Perudex.Bid.valid?(%Perudex.Bid{count: 6, value: 6}, %Perudex.Bid{count: 7, value: 6}, :normal)
+        false
+
+        iex> Perudex.Bid.valid?(%Perudex.Bid{count: 3, value: 1}, %Perudex.Bid{count: 6, value: 6}, :normal)
+        true
+
+        iex> Perudex.Bid.valid?(%Perudex.Bid{count: 7, value: 5}, %Perudex.Bid{count: 3, value: 1}, :normal)
+        true
+  """
   def valid?(%Bid{} = new_bid, %Bid{} = current_bid, :normal) do
     has_valid_value?(new_bid) &&
       has_valid_count?(new_bid) &&
